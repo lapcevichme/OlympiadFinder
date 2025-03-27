@@ -1,4 +1,4 @@
-package com.lapcevichme.olympiadfinder.navigation
+package com.lapcevichme.olympiadfinder.presentation.navigation
 
 import androidx.compose.ui.graphics.vector.ImageVector
 

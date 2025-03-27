@@ -1,4 +1,4 @@
-package com.lapcevichme.olympiadfinder
+package com.lapcevichme.olympiadfinder.presentation
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -6,8 +6,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.Scaffold
 import androidx.navigation.compose.rememberNavController
-import com.lapcevichme.olympiadfinder.navigation.AppNavGraph
-import com.lapcevichme.olympiadfinder.navigation.BottomNavigationBar
+import com.lapcevichme.olympiadfinder.presentation.navigation.AppNavGraph
+import com.lapcevichme.olympiadfinder.presentation.navigation.BottomNavigationBar
 import com.lapcevichme.olympiadfinder.ui.theme.OlympiadFinderTheme
 
 class MainActivity : ComponentActivity() {

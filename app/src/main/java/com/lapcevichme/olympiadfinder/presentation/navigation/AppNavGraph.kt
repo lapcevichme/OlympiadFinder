@@ -1,4 +1,4 @@
-package com.lapcevichme.olympiadfinder.navigation
+package com.lapcevichme.olympiadfinder.presentation.navigation
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
