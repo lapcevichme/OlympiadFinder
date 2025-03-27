@@ -4,13 +4,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.compose.rememberNavController
+import com.lapcevichme.olympiadfinder.navigation.AppNavGraph
+import com.lapcevichme.olympiadfinder.navigation.BottomNavigationBar
 import com.lapcevichme.olympiadfinder.ui.theme.OlympiadFinderTheme
 
 class MainActivity : ComponentActivity() {
@@ -19,29 +16,20 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             OlympiadFinderTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+
+                val navController = rememberNavController()
+                Scaffold(
+                    bottomBar = { BottomNavigationBar(navController = navController) }
+                ) { paddingValues ->
+
+                    /*
+                        ---- IMPLEMENTING BOTTOM NAVIGATION ----
+                    */
+
+                    AppNavGraph(navController = navController, paddingValues = paddingValues)
+
                 }
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    OlympiadFinderTheme {
-        Greeting("Android")
     }
 }
