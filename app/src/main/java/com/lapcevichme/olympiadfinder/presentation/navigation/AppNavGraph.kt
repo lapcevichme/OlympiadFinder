@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.lapcevichme.olympiadfinder.presentation.screens.OlympiadListScreen
 
 @Composable
 fun AppNavGraph(navController: NavHostController, paddingValues: PaddingValues) {
@@ -19,12 +20,12 @@ fun AppNavGraph(navController: NavHostController, paddingValues: PaddingValues) 
         ---- THIS IS A LIST OF BOTTOM NAV ITEMS ----
         */
 
-        composable(route = "home") { /* HomeScreen() */ }
+        composable(route = "home") { OlympiadListScreen() }
         composable(route = "profile") { /* ProfileScreen() */ }
         composable(route = "settings") { /* SettingsScreen() */ }
 
         /*
-        ---- THIS IS A LIST OF HomeScreen COMPOSABLES ----
+        ---- THIS IS A LIST OF OlympiadListScreen COMPOSABLES ----
          */
 
 

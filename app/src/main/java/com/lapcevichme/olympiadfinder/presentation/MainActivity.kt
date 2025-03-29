@@ -9,7 +9,9 @@ import androidx.navigation.compose.rememberNavController
 import com.lapcevichme.olympiadfinder.presentation.navigation.AppNavGraph
 import com.lapcevichme.olympiadfinder.presentation.navigation.BottomNavigationBar
 import com.lapcevichme.olympiadfinder.ui.theme.OlympiadFinderTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
