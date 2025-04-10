@@ -1,52 +1,63 @@
 package com.lapcevichme.olympiadfinder.data.repository.impl
 
+import com.lapcevichme.olympiadfinder.data.network.OlympiadApiService
+import com.lapcevichme.olympiadfinder.data.network.model.NetworkOlympiad
+import com.lapcevichme.olympiadfinder.data.network.model.NetworkStage
 import com.lapcevichme.olympiadfinder.domain.model.Olympiad
 import com.lapcevichme.olympiadfinder.domain.model.Stage
 import com.lapcevichme.olympiadfinder.domain.model.Subject
 import com.lapcevichme.olympiadfinder.domain.repository.OlympiadRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
+import retrofit2.HttpException
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
-// TODO: Replace with actual implementation
 class OlympiadRepositoryImpl @Inject constructor(
-    // Data Sources (ApiService, LocalDatabase)
+    private val olympiadApiService: OlympiadApiService
 ) : OlympiadRepository {
+    private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
+
     override fun getAllOlympiads(): Flow<List<Olympiad>> = flow {
-        /*
-         Заглушка данных
-         (gemini <3)
-        */
-        val olympiads = listOf(
-            Olympiad(
-                id = 1L,
-                name = "Математика Плюс",
-                subjects = listOf(Subject("Математика")),
-                minGrade = 7,
-                maxGrade = 11,
-                stages = listOf(
-                    Stage("Отборочный", LocalDate.of(2025, 10, 1), LocalDate.of(2025, 11, 15)),
-                    Stage("Заключительный", LocalDate.of(2026, 3, 1), null)
-                ),
-                link = "https://mathplus.ru",
-                description = "Олимпиада по математике для школьников 7-11 классов.",
-                keywords = "математика, олимпиада, школьники"
-            ),
-            Olympiad(
-                id = 2L,
-                name = "Русский Медвежонок",
-                subjects = listOf(Subject("Русский язык")),
-                minGrade = 1,
-                maxGrade = 11,
-                stages = listOf(
-                    Stage("Основной тур", LocalDate.of(2025, 11, 15), null)
-                ),
-                link = "https://rm.ru",
-                description = "Международная олимпиада по русскому языку.",
-                keywords = "русский язык, олимпиада, медвежонок"
-            )
+        val response = olympiadApiService.getAllOlympiads()
+        if (response.isSuccessful) {
+            val networkOlympiads = response.body() ?: emptyList()
+            emit(networkOlympiads.map { it.toDomain() })
+        } else {
+            // Обработка ошибки
+            val errorBody = response.errorBody()?.string()
+            val errorMessage = "Ошибка при загрузке олимпиад: ${response.code()} - ${response.message()}"
+
+            throw HttpException(response)
+        }
+    }.catch {
+        emit(emptyList())
+    }
+
+
+    // Extension function для маппинга NetworkOlympiad в Domain Olympiad
+    private fun NetworkOlympiad.toDomain(): Olympiad {
+        return Olympiad(
+            id = id,
+            name = name,
+            subjects = subjects?.map { Subject(it.name) } ?: emptyList(),
+            minGrade = minGrade,
+            maxGrade = maxGrade,
+            stages = stages?.map { it.toDomain() } ?: emptyList(),
+            link = link,
+            description = description,
+            keywords = keywords
         )
-        emit(olympiads)
+    }
+
+    // Extension function для маппинга NetworkStage в Domain Stage
+    private fun NetworkStage.toDomain(): Stage {
+        return Stage(
+            name = name,
+            startDate = startDate?.let { LocalDate.parse(it, dateFormatter) },
+            endDate = endDate?.let { LocalDate.parse(it, dateFormatter) }
+        )
     }
 }
