@@ -1,12 +1,15 @@
 package com.lapcevichme.olympiadfinder.presentation.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,20 +17,26 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,8 +47,10 @@ import com.lapcevichme.olympiadfinder.domain.model.Olympiad
 import com.lapcevichme.olympiadfinder.domain.model.Stage
 import com.lapcevichme.olympiadfinder.domain.model.Subject
 import com.lapcevichme.olympiadfinder.presentation.viewmodel.OlympiadListViewModel
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OlympiadListScreen(
     viewModel: OlympiadListViewModel = hiltViewModel()
@@ -49,10 +60,40 @@ fun OlympiadListScreen(
     val currentPage by viewModel.currentPage.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
+    var selectedOlympiad by remember { mutableStateOf<Olympiad?>(null) }
+
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true
+    )
+    val scope = rememberCoroutineScope()
+
+    // Показываем BottomSheet только если олимпиада выбрана
+    if (selectedOlympiad != null) {
+        ModalBottomSheet(
+            sheetState = sheetState,
+            onDismissRequest = { selectedOlympiad = null },
+            content = {
+                OlympiadDetailsSheetContent(
+                    olympiad = selectedOlympiad!!,
+                    onClose = {
+                        scope.launch {
+                            sheetState.hide()
+                        }.invokeOnCompletion {
+                            // После завершения анимации сбрасываем состояние
+                            if (!sheetState.isVisible) { // Доп. проверка, что он действительно скрылся
+                                selectedOlympiad = null
+                            }
+                        }
+                    }
+                )
+            }
+        )
+    }
+
+    // Основной контент экрана
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
-        // Индикатор загрузки (по центру экрана)
         if (isLoading) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -66,10 +107,17 @@ fun OlympiadListScreen(
                 contentPadding = PaddingValues(all = 8.dp)
             ) {
                 items(olympiads) { olympiad ->
-                    OlympiadItem(olympiad = olympiad)
+                    OlympiadItem(
+                        olympiad = olympiad,
+                        onClick = {
+                            selectedOlympiad = olympiad
+                            scope.launch {
+                                sheetState.show()
+                            }
+                        }
+                    )
                 }
 
-                // Панель пагинации в конце списка
                 item {
                     PaginationPanel(
                         currentPage = currentPage,
@@ -83,6 +131,82 @@ fun OlympiadListScreen(
         }
     }
 }
+
+@Composable
+fun OlympiadDetailsSheetContent(olympiad: Olympiad, onClose: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth() // Занимаем всю ширину
+            .padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = olympiad.name,
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp)
+            )
+            IconButton(onClick = onClose) {
+                Icon(Icons.Default.Close, contentDescription = "Close")
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(text = "Description:", style = MaterialTheme.typography.titleMedium)
+        Text(text = olympiad.description ?: "No description available")
+        Spacer(modifier = Modifier.height(8.dp))
+
+        olympiad.subjects?.takeIf { it.isNotEmpty() }?.let { subjects ->
+            Text("Subjects:", style = MaterialTheme.typography.titleMedium)
+            subjects.forEach { subject ->
+                Text("- ${subject.name}", style = MaterialTheme.typography.bodyMedium)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        olympiad.stages?.takeIf { it.isNotEmpty() }?.let { stages ->
+            Text("Stages:", style = MaterialTheme.typography.titleMedium)
+            stages.forEach { stage ->
+                Text("- ${stage.name}", style = MaterialTheme.typography.bodyMedium)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        val gradeText = when {
+            olympiad.minGrade != null && olympiad.maxGrade != null -> "Grades: ${olympiad.minGrade} - ${olympiad.maxGrade}"
+            olympiad.minGrade != null -> "Min Grade: ${olympiad.minGrade}"
+            olympiad.maxGrade != null -> "Max Grade: ${olympiad.maxGrade}"
+            else -> null
+        }
+        gradeText?.let {
+            Text(it, style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+
+        olympiad.link?.let {
+            Text("Link:", style = MaterialTheme.typography.titleMedium)
+            Text(
+                it,
+                style = MaterialTheme.typography.bodyMedium
+            ) // Можно сделать кликабельной ссылкой
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+        olympiad.keywords?.let {
+            Text("Keywords:", style = MaterialTheme.typography.titleMedium)
+            Text(it, style = MaterialTheme.typography.bodyMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+    }
+}
+
 
 @Composable
 fun PaginationPanel(
@@ -122,7 +246,7 @@ fun PaginationPanel(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Items per page:")
             var expanded by remember { mutableStateOf(false) }
-            var selectedOptionText by remember { mutableStateOf(pageSizeOptions.first()) }
+            var selectedOptionText by remember { mutableIntStateOf(pageSizeOptions.first()) }
 
             Box {
                 TextButton(onClick = { expanded = true }) {
@@ -151,11 +275,12 @@ fun PaginationPanel(
 }
 
 @Composable
-fun OlympiadItem(olympiad: Olympiad) {
+fun OlympiadItem(olympiad: Olympiad, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = 4.dp)
+            .clickable { onClick() },
         shape = MaterialTheme.shapes.medium
     ) {
         Column(
@@ -165,7 +290,10 @@ fun OlympiadItem(olympiad: Olympiad) {
         ) {
             Text(text = olympiad.name, style = MaterialTheme.typography.headlineSmall)
             olympiad.subjects?.takeIf { it.isNotEmpty() }?.let { subjects ->
-                Text(text = "Предметы: ${subjects.joinToString { it.name }}", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = "Предметы: ${subjects.joinToString { it.name }}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
             } ?: Text(text = "Предметы: -", style = MaterialTheme.typography.bodyMedium)
 
             olympiad.minGrade?.let { min ->
@@ -177,12 +305,19 @@ fun OlympiadItem(olympiad: Olympiad) {
             } ?: Text(text = "Классы: -", style = MaterialTheme.typography.bodyMedium)
 
             olympiad.stages?.takeIf { it.isNotEmpty() }?.let { stages ->
-                Text(text = "Этапы: ${stages.joinToString { it.name }}", style = MaterialTheme.typography.bodySmall)
+                Text(
+                    text = "Этапы: ${stages.joinToString { it.name }}",
+                    style = MaterialTheme.typography.bodySmall
+                )
             } ?: Text(text = "Этапы: -", style = MaterialTheme.typography.bodySmall)
 
             olympiad.description?.let { description ->
                 Text(text = description, style = MaterialTheme.typography.bodySmall, maxLines = 2)
-            } ?: Text(text = "Описание отсутствует", style = MaterialTheme.typography.bodySmall, maxLines = 2)
+            } ?: Text(
+                text = "Описание отсутствует",
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 2
+            )
         }
     }
 }
@@ -210,7 +345,8 @@ fun OlympiadItemPreview() {
                 link = "https://mathplus.ru",
                 description = "Олимпиада по математике для школьников 7-11 классов. Включает задания повышенной сложности.",
                 keywords = "математика, олимпиада, школьники"
-            )
+            ),
+            onClick = {}
         )
     }
 }
@@ -232,7 +368,8 @@ fun OlympiadItemShortPreview() {
                 link = "https://rm.ru",
                 description = "Международная олимпиада по русскому языку.",
                 keywords = "русский язык, олимпиада, медвежонок"
-            )
+            ),
+            onClick = {}
         )
     }
 }
@@ -254,7 +391,8 @@ fun OlympiadItemNoGradesPreview() {
                 link = null,
                 description = "Описание олимпиады без указания минимального и максимального классов.",
                 keywords = "разное, олимпиада"
-            )
+            ),
+            onClick = {}
         )
     }
 }
@@ -274,7 +412,8 @@ fun OlympiadItemNullableDataPreview() {
                 link = null,
                 description = null,
                 keywords = null
-            )
+            ),
+            onClick = {}
         )
     }
 }
@@ -294,7 +433,8 @@ fun OlympiadItemEmptyListsPreview() {
                 link = "http://example.com",
                 description = "",
                 keywords = ""
-            )
+            ),
+            onClick = {}
         )
     }
 }
