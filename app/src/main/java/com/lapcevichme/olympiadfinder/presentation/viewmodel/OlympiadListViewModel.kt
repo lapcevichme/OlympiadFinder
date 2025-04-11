@@ -34,11 +34,21 @@ class OlympiadListViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
+    private var hasLoadedInitialData = false
+
     init {
+        println("OlympiadListViewModel: ViewModel hashcode: ${this.hashCode()}")
         loadOlympiads()
     }
 
     fun loadOlympiads() {
+        println("OlympiadListViewModel: started loading olympiads")
+        if (hasLoadedInitialData && _currentPage.value == 1 && _olympiads.value.isNotEmpty()) {
+            println("OlympiadListViewModel: loadOlympiads() skipped - data already loaded.")
+            return
+        }
+        println("OlympiadListViewModel: Loading olympiads for page ${_currentPage.value}")
+
         viewModelScope.launch {
             _isLoading.value = true
             getPaginatedOlympiadsUseCase(_currentPage.value, _paginationMetadata.value.pageSize)

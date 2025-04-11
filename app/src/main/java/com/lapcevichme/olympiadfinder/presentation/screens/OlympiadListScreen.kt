@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -37,12 +38,14 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.compose.rememberNavController
 import com.lapcevichme.olympiadfinder.domain.model.Olympiad
 import com.lapcevichme.olympiadfinder.domain.model.Stage
 import com.lapcevichme.olympiadfinder.domain.model.Subject
@@ -53,12 +56,19 @@ import java.time.LocalDate
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OlympiadListScreen(
-    viewModel: OlympiadListViewModel = hiltViewModel()
+    viewModel: OlympiadListViewModel = hiltViewModel(rememberNavController().getBackStackEntry("main_graph"))
 ) {
+    println("OlympiadListScreen: ViewModel hashCode = ${viewModel.hashCode()}")
+
     val olympiads by viewModel.olympiads.collectAsState()
     val paginationMetadata by viewModel.paginationMetadata.collectAsState()
     val currentPage by viewModel.currentPage.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+
+    println("OlympiadListScreen: olympiads.size = ${olympiads.size}")
+    println("OlympiadListScreen: paginationMetadata = $paginationMetadata")
+    println("OlympiadListScreen: currentPage = $currentPage")
+    println("OlympiadListScreen: isLoading = $isLoading")
 
     var selectedOlympiad by remember { mutableStateOf<Olympiad?>(null) }
 
@@ -90,6 +100,10 @@ fun OlympiadListScreen(
         )
     }
 
+    val listState: LazyListState = rememberSaveable(saver = LazyListState.Saver) {
+        LazyListState()
+    }
+
     // Основной контент экрана
     Column(
         modifier = Modifier.fillMaxSize()
@@ -104,7 +118,8 @@ fun OlympiadListScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(all = 8.dp)
+                contentPadding = PaddingValues(all = 8.dp),
+                state = listState
             ) {
                 items(olympiads) { olympiad ->
                     OlympiadItem(
