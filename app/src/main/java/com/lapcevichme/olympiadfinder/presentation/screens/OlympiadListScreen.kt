@@ -1,18 +1,35 @@
 package com.lapcevichme.olympiadfinder.presentation.screens
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -28,13 +45,107 @@ fun OlympiadListScreen(
     viewModel: OlympiadListViewModel = hiltViewModel()
 ) {
     val olympiads by viewModel.olympiads.collectAsState()
+    val paginationMetadata by viewModel.paginationMetadata.collectAsState()
+    val currentPage by viewModel.currentPage.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
-    LazyColumn (
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(all = 8.dp)
+    Column(
+        modifier = Modifier.fillMaxSize()
     ) {
-        items(olympiads) { olympiad ->
-            OlympiadItem(olympiad = olympiad)
+        // Индикатор загрузки (по центру экрана)
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(all = 8.dp)
+            ) {
+                items(olympiads) { olympiad ->
+                    OlympiadItem(olympiad = olympiad)
+                }
+
+                // Панель пагинации в конце списка
+                item {
+                    PaginationPanel(
+                        currentPage = currentPage,
+                        totalPages = paginationMetadata.totalPages,
+                        onPageChange = { viewModel.onPageChanged(it) },
+                        onPageSizeChange = { viewModel.onPageSizeChanged(it) },
+                        pageSizeOptions = listOf(10, 20, 50)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PaginationPanel(
+    currentPage: Int,
+    totalPages: Int,
+    onPageChange: (Int) -> Unit,
+    onPageSizeChange: (Int) -> Unit,
+    pageSizeOptions: List<Int>
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Кнопки "Предыдущая" и "Следующая"
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = { if (currentPage > 1) onPageChange(currentPage - 1) },
+                enabled = currentPage > 1
+            ) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous Page")
+            }
+            Text("Page $currentPage/$totalPages")
+            IconButton(
+                onClick = { if (currentPage < totalPages) onPageChange(currentPage + 1) },
+                enabled = currentPage < totalPages
+            ) {
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Page")
+            }
+        }
+
+        // Выпадающий список для выбора размера страницы
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Items per page:")
+            var expanded by remember { mutableStateOf(false) }
+            var selectedOptionText by remember { mutableStateOf(pageSizeOptions.first()) }
+
+            Box {
+                TextButton(onClick = { expanded = true }) {
+                    Text(selectedOptionText.toString())
+                    Icon(Icons.Default.ArrowDropDown, contentDescription = "Page Size Options")
+                }
+
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    pageSizeOptions.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option.toString()) },
+                            onClick = {
+                                selectedOptionText = option
+                                onPageSizeChange(option)
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -75,6 +186,7 @@ fun OlympiadItem(olympiad: Olympiad) {
         }
     }
 }
+
 /*
     ---- PREVIEWS ----
     (made by gemini <3)

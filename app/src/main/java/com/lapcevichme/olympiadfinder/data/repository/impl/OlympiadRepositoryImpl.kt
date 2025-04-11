@@ -3,6 +3,7 @@ package com.lapcevichme.olympiadfinder.data.repository.impl
 import com.lapcevichme.olympiadfinder.data.network.OlympiadApiService
 import com.lapcevichme.olympiadfinder.data.network.model.NetworkOlympiad
 import com.lapcevichme.olympiadfinder.data.network.model.NetworkStage
+import com.lapcevichme.olympiadfinder.data.repository.mock.PaginatedResponse
 import com.lapcevichme.olympiadfinder.domain.model.Olympiad
 import com.lapcevichme.olympiadfinder.domain.model.Stage
 import com.lapcevichme.olympiadfinder.domain.model.Subject
@@ -34,6 +35,10 @@ class OlympiadRepositoryImpl @Inject constructor(
         }
     }.catch {
         emit(emptyList())
+    }
+
+    override fun getOlympiads(page: Int, pageSize: Int): Flow<PaginatedResponse<Olympiad>> {
+        TODO("Not yet implemented")
     }
 
 
