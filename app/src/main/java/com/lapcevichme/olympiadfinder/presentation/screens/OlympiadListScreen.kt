@@ -1,6 +1,20 @@
 package com.lapcevichme.olympiadfinder.presentation.screens
 
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +38,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -38,6 +53,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -49,7 +65,7 @@ import com.lapcevichme.olympiadfinder.presentation.viewmodel.OlympiadListViewMod
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun OlympiadListScreen(
     viewModel: OlympiadListViewModel = hiltViewModel(rememberNavController().getBackStackEntry("main_graph"))
@@ -60,6 +76,10 @@ fun OlympiadListScreen(
     val paginationMetadata by viewModel.paginationMetadata.collectAsState()
     val currentPage by viewModel.currentPage.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+
+    // animations
+    val animatePageTransitions by viewModel.animatePageTransitions.collectAsState()
+    val animateListItems by viewModel.animateListItems.collectAsState()
 
     println("OlympiadListScreen: olympiads.size = ${olympiads.size}")
     println("OlympiadListScreen: paginationMetadata = $paginationMetadata")
@@ -112,33 +132,81 @@ fun OlympiadListScreen(
                 CircularProgressIndicator()
             }
         } else {
-            LazyColumn(
+            AnimatedContent(
+                targetState = currentPage,
                 modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(all = 8.dp),
-                state = listState
-            ) {
-                items(olympiads) { olympiad ->
-                    OlympiadItem(
-                        olympiad = olympiad,
-                        onClick = {
-                            selectedOlympiad = olympiad
-                            scope.launch {
-                                sheetState.show()
-                            }
-                        }
-                    )
-                }
-
-                item {
-                    if (paginationMetadata.totalPages > 0) {
-                        PaginationPanel(
-                            currentPage = currentPage,
-                            totalPages = paginationMetadata.totalPages,
-                            onPageChange = { viewModel.onPageChanged(it) }
+                transitionSpec = {
+                    if (animatePageTransitions) {
+                        // Определяем анимацию в зависимости от того, вперед или назад листаем
+                        if (targetState > initialState) {
+                            // Новая страница > Старой (листаем вперед)
+                            slideInHorizontally { fullWidth -> fullWidth } + fadeIn() togetherWith
+                                    slideOutHorizontally { fullWidth -> -fullWidth } + fadeOut()
+                        } else {
+                            // Новая страница < Старой (листаем назад)
+                            slideInHorizontally { fullWidth -> -fullWidth } + fadeIn() togetherWith
+                                    slideOutHorizontally { fullWidth -> fullWidth } + fadeOut()
+                        }.using(
+                            // Можно добавить SizeTransform, чтобы избежать резких скачков размера, если высота списков разная
+                            SizeTransform(clip = false)
                         )
+                    } else {
+                        println("типа нет анимации") // TODO: pls destroy me
+                        fadeIn() togetherWith fadeOut()
                     }
+                },
+                label = "OlympiadListPageAnimation" // Метка для отладки
+            ) { _ ->
+                LazyColumn(
+                    contentPadding = PaddingValues(all = 8.dp),
+                    state = listState
+                ) {
+                    items(
+                        items = olympiads,
+                        key = { olympiad -> olympiad.id }
+                    ) { olympiad ->
+                        AnimatedVisibility(
+                            visible = true,
+                            enter = fadeIn(
+                                animationSpec = tween(
+                                    durationMillis = 300,
+                                    delayMillis = 100
+                                )
+                            ), // Небольшая задержка
+                            modifier = Modifier.animateItemPlacement()
+                        ) {
+                            OlympiadItem(
+                                olympiad = olympiad,
+                                onClick = {
+                                    selectedOlympiad = olympiad
+                                    scope.launch { sheetState.show() }
+
+                                },
+                                animate = animateListItems
+                            )
+                        }
+                    }
+
+
                 }
             }
+
+            if (paginationMetadata.totalPages > 0 && !isLoading) {
+                PaginationPanel(
+                    currentPage = currentPage,
+                    totalPages = paginationMetadata.totalPages,
+                    onPageChange = { viewModel.onPageChanged(it) }
+                )
+            }
+
+            if (isLoading && olympiads.isNotEmpty()) {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp)
+                )
+            }
+
         }
     }
 }
@@ -147,7 +215,7 @@ fun OlympiadListScreen(
 fun OlympiadDetailsSheetContent(olympiad: Olympiad, onClose: () -> Unit) {
     Column(
         modifier = Modifier
-            .fillMaxWidth() // Занимаем всю ширину
+            .fillMaxWidth()
             .padding(16.dp)
     ) {
         Row(
@@ -243,10 +311,25 @@ fun PaginationPanel(
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous Page")
         }
         Spacer(modifier = Modifier.width(16.dp))
-        Text(
-            text = "$currentPage / $totalPages",
-            style = MaterialTheme.typography.bodyMedium
-        )
+        AnimatedContent(
+            targetState = currentPage,
+            transitionSpec = {
+                if (targetState > initialState) {
+                    slideInVertically { height -> height } + fadeIn() togetherWith
+                            slideOutVertically { height -> -height } + fadeOut()
+                } else {
+                    slideInVertically { height -> -height } + fadeIn() togetherWith
+                            slideOutVertically { height -> height } + fadeOut()
+                }.using(SizeTransform(clip = false))
+            },
+            label = "PageNumberAnimation"
+        ) { targetPage ->
+            Text(
+                text = "$targetPage / $totalPages", // Используем targetPage
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+
         Spacer(modifier = Modifier.width(16.dp))
         IconButton(
             onClick = { if (currentPage < totalPages) onPageChange(currentPage + 1) },
@@ -259,13 +342,33 @@ fun PaginationPanel(
 
 
 @Composable
-fun OlympiadItem(olympiad: Olympiad, onClick: () -> Unit) {
+fun OlympiadItem(olympiad: Olympiad, onClick: () -> Unit, animate: Boolean) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.98f else 1.0f, // Немного сжимаем при нажатии
+        label = "OlympiadItemScale"
+    )
+
     Card(
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .clickable { onClick() },
+            .then(
+                if (animate) {
+                    Modifier.graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                    }
+                } else {
+                    Modifier
+                }
+            ),
+        interactionSource = interactionSource,
         shape = MaterialTheme.shapes.medium
+        // elevation = CardDefaults.cardElevation(...) // Можно добавить elevation
     ) {
         Column(
             modifier = Modifier
@@ -295,12 +398,15 @@ fun OlympiadItem(olympiad: Olympiad, onClick: () -> Unit) {
                 )
             } ?: Text(text = "Этапы: -", style = MaterialTheme.typography.bodySmall)
 
-            olympiad.description?.let { description ->
-                Text(text = description, style = MaterialTheme.typography.bodySmall, maxLines = 2)
+            // Убрал лишний Text и maxLines=2, чтобы описание было полным, если оно короткое
+            olympiad.description?.takeIf { it.isNotBlank() }?.let { description ->
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall
+                ) // Показываем полное описание
             } ?: Text(
                 text = "Описание отсутствует",
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 2
+                style = MaterialTheme.typography.bodySmall
             )
         }
     }
@@ -330,7 +436,8 @@ fun OlympiadItemPreview() {
                 description = "Олимпиада по математике для школьников 7-11 классов. Включает задания повышенной сложности.",
                 keywords = "математика, олимпиада, школьники"
             ),
-            onClick = {}
+            onClick = {},
+            animate = true
         )
     }
 }
@@ -353,7 +460,8 @@ fun OlympiadItemShortPreview() {
                 description = "Международная олимпиада по русскому языку.",
                 keywords = "русский язык, олимпиада, медвежонок"
             ),
-            onClick = {}
+            onClick = {},
+            animate = true
         )
     }
 }
@@ -376,7 +484,8 @@ fun OlympiadItemNoGradesPreview() {
                 description = "Описание олимпиады без указания минимального и максимального классов.",
                 keywords = "разное, олимпиада"
             ),
-            onClick = {}
+            onClick = {},
+            animate = true
         )
     }
 }
@@ -397,7 +506,8 @@ fun OlympiadItemNullableDataPreview() {
                 description = null,
                 keywords = null
             ),
-            onClick = {}
+            onClick = {},
+            animate = true
         )
     }
 }
@@ -418,7 +528,8 @@ fun OlympiadItemEmptyListsPreview() {
                 description = "",
                 keywords = ""
             ),
-            onClick = {}
+            onClick = {},
+            animate = true
         )
     }
 }

@@ -5,9 +5,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.lapcevichme.olympiadfinder.presentation.navigation.AppNavGraph
 import com.lapcevichme.olympiadfinder.presentation.navigation.BottomNavigationBar
@@ -25,23 +28,27 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
 
+            val navController: NavHostController = rememberNavController()
             val currentTheme by mainViewModel.theme.collectAsState()
+            val animateTheme by mainViewModel.animateThemeChanges.collectAsState()
 
-            OlympiadFinderTheme (
-                dynamicTheme = currentTheme
-            ){
-
-                val navController = rememberNavController()
-                Scaffold(
-                    bottomBar = { BottomNavigationBar(navController = navController) }
-                ) { paddingValues ->
-
-                    /*
-                        ---- IMPLEMENTING BOTTOM NAVIGATION ----
-                    */
-
-                    AppNavGraph(navController = navController, paddingValues = paddingValues)
-
+            Crossfade(
+                targetState = currentTheme,
+                animationSpec = if (animateTheme) {
+                    tween(durationMillis = 500)
+                } else {
+                    tween(durationMillis = 0) // TODO: найти нормальный способ выключить анимку
+                }
+                // modifier = Modifier.fillMaxSize() // Можно добавить, если нужно заполнение
+            ) { themeState ->
+                OlympiadFinderTheme(
+                    dynamicTheme = themeState
+                ) {
+                    Scaffold(
+                        bottomBar = { BottomNavigationBar(navController = navController) }
+                    ) { paddingValues ->
+                        AppNavGraph(navController = navController, paddingValues = paddingValues)
+                    }
                 }
             }
         }

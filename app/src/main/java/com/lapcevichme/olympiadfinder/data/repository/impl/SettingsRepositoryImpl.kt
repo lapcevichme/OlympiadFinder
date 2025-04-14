@@ -25,4 +25,23 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setPageSizePreference(size: Int) {
         settingsDataStore.savePageSizePreference(size)
     }
+
+    // --- Animated Transitions ---
+    override val animatePageTransitionsPreference: Flow<Boolean>
+        get() = settingsDataStore.animatePageTransitionsPreference
+    override suspend fun setAnimatePageTransitionsPreference(enabled: Boolean) {
+        settingsDataStore.saveAnimatePageTransitionsPreference(enabled)
+    }
+
+    override val animateListItemsPreference: Flow<Boolean>
+        get() = settingsDataStore.animateListItemsPreference
+    override suspend fun setAnimateListItemsPreference(enabled: Boolean) {
+        settingsDataStore.saveAnimateListItemsPreference(enabled)
+    }
+
+    override val animateThemeChangesPreference: Flow<Boolean>
+        get() = settingsDataStore.animateThemeChangesPreference
+    override suspend fun setAnimateThemeChangesPreference(enabled: Boolean) {
+        settingsDataStore.saveAnimateThemeChangesPreference(enabled)
+    }
 }

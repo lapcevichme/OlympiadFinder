@@ -7,6 +7,8 @@ import com.lapcevichme.olympiadfinder.data.repository.mock.PaginationMetadata //
 import com.lapcevichme.olympiadfinder.domain.model.Olympiad
 import com.lapcevichme.olympiadfinder.domain.usecases.GetPaginatedOlympiadsUseCase
 import com.lapcevichme.olympiadfinder.domain.usecases.settings.GetPageSizePreferenceUseCase // <-- ИМПОРТ
+import com.lapcevichme.olympiadfinder.domain.usecases.settings.animations.GetAnimateListItemsUseCase
+import com.lapcevichme.olympiadfinder.domain.usecases.settings.animations.GetAnimatePageTransitionsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.* // Импортируем нужные операторы flow
 import kotlinx.coroutines.launch
@@ -16,7 +18,9 @@ import javax.inject.Inject
 class OlympiadListViewModel @Inject constructor(
     // private val getAllOlympiadsUseCase: GetAllOlympiadsUseCase, // Убрал, если не используется
     private val getPaginatedOlympiadsUseCase: GetPaginatedOlympiadsUseCase,
-    getPageSizePreferenceUseCase: GetPageSizePreferenceUseCase // <-- ИНЖЕКТ
+    getPageSizePreferenceUseCase: GetPageSizePreferenceUseCase,
+    getAnimatePageTransitionsUseCase: GetAnimatePageTransitionsUseCase,
+    getAnimateListItemsUseCase: GetAnimateListItemsUseCase
 ) : ViewModel() {
 
     private val _olympiads = MutableStateFlow<List<Olympiad>>(emptyList())
@@ -29,6 +33,24 @@ class OlympiadListViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000L),
             initialValue = DEFAULT_PAGE_SIZE // Начальное значение по умолчанию
         )
+
+    // StateFlow для animatePageTransitions
+    val animatePageTransitions: StateFlow<Boolean> = getAnimatePageTransitionsUseCase()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true // Значение по умолчанию
+        )
+
+    // StateFlow для animateListItems
+    val animateListItems: StateFlow<Boolean> = getAnimateListItemsUseCase()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true // Значение по умолчанию
+        )
+
+
 
     // _paginationMetadata теперь не хранит изменяемый pageSize, он берется из pageSize StateFlow
     private val _paginationMetadata = MutableStateFlow(

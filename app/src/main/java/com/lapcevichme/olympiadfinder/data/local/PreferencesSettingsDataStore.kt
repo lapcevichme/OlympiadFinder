@@ -2,6 +2,7 @@ package com.lapcevichme.olympiadfinder.data.local
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -12,6 +13,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
+
 import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -24,6 +26,11 @@ class PreferencesSettingsDataStore @Inject constructor(@ApplicationContext priva
     private object PreferencesKeys {
         val THEME_PREFERENCE = stringPreferencesKey("theme_preference")
         val PAGE_SIZE_PREFERENCE = intPreferencesKey("page_size_preference")
+
+        // --- Animation preferences ---
+        val ANIMATE_PAGE_TRANSITIONS = booleanPreferencesKey("animate_page_transitions")
+        val ANIMATE_LIST_ITEMS = booleanPreferencesKey("animate_list_items")
+        val ANIMATE_THEME_CHANGES = booleanPreferencesKey("animate_theme_changes")
     }
 
     // Flow для темы
@@ -54,6 +61,29 @@ class PreferencesSettingsDataStore @Inject constructor(@ApplicationContext priva
             preferences[PreferencesKeys.PAGE_SIZE_PREFERENCE] = pageSize
         }
     }
+
+    // --- Flows & Savers for animation preferences ---
+    val animatePageTransitionsPreference: Flow<Boolean> = context.dataStore.data
+        .map { it[PreferencesKeys.ANIMATE_PAGE_TRANSITIONS] ?: true } // Включены по умолчанию
+
+    suspend fun saveAnimatePageTransitionsPreference(enabled: Boolean) {
+        context.dataStore.edit { it[PreferencesKeys.ANIMATE_PAGE_TRANSITIONS] = enabled }
+    }
+
+    val animateListItemsPreference: Flow<Boolean> = context.dataStore.data
+        .map { it[PreferencesKeys.ANIMATE_LIST_ITEMS] ?: true }
+
+    suspend fun saveAnimateListItemsPreference(enabled: Boolean) {
+        context.dataStore.edit { it[PreferencesKeys.ANIMATE_LIST_ITEMS] = enabled }
+    }
+
+    val animateThemeChangesPreference: Flow<Boolean> = context.dataStore.data
+        .map { it[PreferencesKeys.ANIMATE_THEME_CHANGES] ?: true }
+
+    suspend fun saveAnimateThemeChangesPreference(enabled: Boolean) {
+        context.dataStore.edit { it[PreferencesKeys.ANIMATE_THEME_CHANGES] = enabled }
+    }
+
 
     suspend fun clearAppCache() {
         println("App cache clearing requested...")
