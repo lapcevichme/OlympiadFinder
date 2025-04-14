@@ -11,7 +11,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import com.lapcevichme.olympiadfinder.presentation.screens.OlympiadListScreen
+import com.lapcevichme.olympiadfinder.presentation.screens.SettingsScreen
 import com.lapcevichme.olympiadfinder.presentation.viewmodel.OlympiadListViewModel
+import com.lapcevichme.olympiadfinder.presentation.viewmodel.SettingsViewModel
 
 @Composable
 fun AppNavGraph(navController: NavHostController, paddingValues: PaddingValues) {
@@ -52,9 +54,8 @@ fun AppNavGraph(navController: NavHostController, paddingValues: PaddingValues) 
                 val parentEntry = remember(backStackEntry) {
                     navController.getBackStackEntry("main_graph")
                 }
-                // val settingsViewModel: SettingsViewModel = hiltViewModel(parentEntry)
-                /* SettingsScreen(viewModel = settingsViewModel) */
-                //SettingsScreen()
+                val settingsViewModel: SettingsViewModel = hiltViewModel(parentEntry)
+                SettingsScreen(viewModel = settingsViewModel)
             }
         }
 

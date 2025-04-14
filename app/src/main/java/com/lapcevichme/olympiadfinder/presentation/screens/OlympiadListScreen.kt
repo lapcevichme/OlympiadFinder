@@ -11,30 +11,26 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -134,13 +130,13 @@ fun OlympiadListScreen(
                 }
 
                 item {
-                    PaginationPanel(
-                        currentPage = currentPage,
-                        totalPages = paginationMetadata.totalPages,
-                        onPageChange = { viewModel.onPageChanged(it) },
-                        onPageSizeChange = { viewModel.onPageSizeChanged(it) },
-                        pageSizeOptions = listOf(10, 20, 50)
-                    )
+                    if (paginationMetadata.totalPages > 0) {
+                        PaginationPanel(
+                            currentPage = currentPage,
+                            totalPages = paginationMetadata.totalPages,
+                            onPageChange = { viewModel.onPageChanged(it) }
+                        )
+                    }
                 }
             }
         }
@@ -227,67 +223,40 @@ fun OlympiadDetailsSheetContent(olympiad: Olympiad, onClose: () -> Unit) {
 fun PaginationPanel(
     currentPage: Int,
     totalPages: Int,
-    onPageChange: (Int) -> Unit,
-    onPageSizeChange: (Int) -> Unit,
-    pageSizeOptions: List<Int>
+    onPageChange: (Int) -> Unit
 ) {
+    if (totalPages <= 1) {
+        return
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Кнопки "Предыдущая" и "Следующая"
-        Row(
-            verticalAlignment = Alignment.CenterVertically
+        IconButton(
+            onClick = { if (currentPage > 1) onPageChange(currentPage - 1) },
+            enabled = currentPage > 1
         ) {
-            IconButton(
-                onClick = { if (currentPage > 1) onPageChange(currentPage - 1) },
-                enabled = currentPage > 1
-            ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous Page")
-            }
-            Text("Page $currentPage/$totalPages")
-            IconButton(
-                onClick = { if (currentPage < totalPages) onPageChange(currentPage + 1) },
-                enabled = currentPage < totalPages
-            ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Page")
-            }
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous Page")
         }
-
-        // Выпадающий список для выбора размера страницы
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Items per page:")
-            var expanded by remember { mutableStateOf(false) }
-            var selectedOptionText by remember { mutableIntStateOf(pageSizeOptions.first()) }
-
-            Box {
-                TextButton(onClick = { expanded = true }) {
-                    Text(selectedOptionText.toString())
-                    Icon(Icons.Default.ArrowDropDown, contentDescription = "Page Size Options")
-                }
-
-                DropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    pageSizeOptions.forEach { option ->
-                        DropdownMenuItem(
-                            text = { Text(option.toString()) },
-                            onClick = {
-                                selectedOptionText = option
-                                onPageSizeChange(option)
-                                expanded = false
-                            }
-                        )
-                    }
-                }
-            }
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            text = "$currentPage / $totalPages",
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        IconButton(
+            onClick = { if (currentPage < totalPages) onPageChange(currentPage + 1) },
+            enabled = currentPage < totalPages
+        ) {
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Page")
         }
     }
 }
+
 
 @Composable
 fun OlympiadItem(olympiad: Olympiad, onClick: () -> Unit) {
