@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -48,11 +47,11 @@ fun AppNavGraph(navController: NavHostController, paddingValues: PaddingValues) 
             startDestination = HOME_SCREEN,
             route = HOME_GRAPH_ROUTE
         ) {
-            composable(route = HOME_SCREEN) { backStackEntry ->
-                val graphEntry = remember(backStackEntry) { navController.getBackStackEntry(HOME_GRAPH_ROUTE) }
-                val viewModel: OlympiadListViewModel = hiltViewModel(graphEntry)
+            composable(route = HOME_SCREEN) {
+                val viewModel: OlympiadListViewModel = hiltViewModel()
                 OlympiadListScreen(viewModel = viewModel)
             }
+            // TODO: Другие экраны Home Graph
         }
 
         // 2. Profile Graph
@@ -60,50 +59,46 @@ fun AppNavGraph(navController: NavHostController, paddingValues: PaddingValues) 
             startDestination = PROFILE_SCREEN,
             route = PROFILE_GRAPH_ROUTE
         ) {
-            composable(route = PROFILE_SCREEN) { backStackEntry ->
-                val graphEntry = remember(backStackEntry) { navController.getBackStackEntry(PROFILE_GRAPH_ROUTE) }
-                // ... ProfileScreen ...
+            composable(route = PROFILE_SCREEN) {
+                // ViewModel scoped to Activity
+                // val profileViewModel: ProfileViewModel = hiltViewModel()
                 Text("Экран профиля (заглушка)")
             }
+            // TODO: Другие экраны Profile Graph
         }
 
         /*
             ---- Settings Graph (Top-level) ----
-            Этот граф для всех настроек. Навигация внутри графа управляется NavController SettingsHomeScreen.
+            ViewModel'ы будут scoped to Activity.
         */
         navigation(
-            startDestination = SETTINGS_HOME_SCREEN, // Стартовый экран - список категорий
-            route = SETTINGS_GRAPH_ROUTE // Маршрут самого графа настроек
+            startDestination = SETTINGS_HOME_SCREEN,
+            route = SETTINGS_GRAPH_ROUTE
         ) {
-            // Главный экран настроек
-            composable(route = SETTINGS_HOME_SCREEN) { backStackEntry ->
-                val graphEntry = remember(backStackEntry) { navController.getBackStackEntry(SETTINGS_GRAPH_ROUTE) }
-                val settingsViewModel: SettingsViewModel = hiltViewModel(graphEntry)
-                SettingsHomeScreen(navController = navController, viewModel = settingsViewModel) // Передаем NavController
+            // Главный экран настроек (список категорий)
+            composable(route = SETTINGS_HOME_SCREEN) {
+                val settingsViewModel: SettingsViewModel = hiltViewModel()
+                SettingsHomeScreen(navController = navController, viewModel = settingsViewModel)
             }
 
             // Экраны внутри Settings Graph
-            composable(route = SETTINGS_ANIMATION_SCREEN) { backStackEntry ->
-                val graphEntry = remember(backStackEntry) { navController.getBackStackEntry(SETTINGS_GRAPH_ROUTE) }
-                val settingsViewModel: SettingsViewModel = hiltViewModel(graphEntry)
+            composable(route = SETTINGS_ANIMATION_SCREEN) {
+                val settingsViewModel: SettingsViewModel = hiltViewModel()
                 AnimationSettingsScreen(viewModel = settingsViewModel)
             }
 
-            composable(route = SETTINGS_DATA_SCREEN) { backStackEntry ->
-                val graphEntry = remember(backStackEntry) { navController.getBackStackEntry(SETTINGS_GRAPH_ROUTE) }
-                val settingsViewModel: SettingsViewModel = hiltViewModel(graphEntry)
+            composable(route = SETTINGS_DATA_SCREEN) {
+                val settingsViewModel: SettingsViewModel = hiltViewModel()
                 DataSettingsScreen(viewModel = settingsViewModel)
             }
 
-            composable(route = SETTINGS_APPEARANCE_SCREEN) { backStackEntry ->
-                val graphEntry = remember(backStackEntry) { navController.getBackStackEntry(SETTINGS_GRAPH_ROUTE) }
-                val settingsViewModel: SettingsViewModel = hiltViewModel(graphEntry)
+            composable(route = SETTINGS_APPEARANCE_SCREEN) {
+                val settingsViewModel: SettingsViewModel = hiltViewModel()
                 AppearanceSettingsScreen(viewModel = settingsViewModel)
             }
 
-            composable(route = SETTINGS_DATA_DISPLAY_SCREEN) { backStackEntry ->
-                val graphEntry = remember(backStackEntry) { navController.getBackStackEntry(SETTINGS_GRAPH_ROUTE) }
-                val settingsViewModel: SettingsViewModel = hiltViewModel(graphEntry)
+            composable(route = SETTINGS_DATA_DISPLAY_SCREEN) {
+                val settingsViewModel: SettingsViewModel = hiltViewModel()
                 DataDisplaySettingsScreen(viewModel = settingsViewModel)
             }
 
