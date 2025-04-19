@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.collectAsState
@@ -37,7 +38,7 @@ class MainActivity : ComponentActivity() {
                 animationSpec = if (animateTheme) {
                     tween(durationMillis = 500)
                 } else {
-                    tween(durationMillis = 0) // TODO: найти нормальный способ выключить анимку
+                    snap()
                 }
                 // modifier = Modifier.fillMaxSize() // Можно добавить, если нужно заполнение
             ) { themeState ->

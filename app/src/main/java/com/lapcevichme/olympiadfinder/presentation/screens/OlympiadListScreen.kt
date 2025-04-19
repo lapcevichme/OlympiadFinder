@@ -2,8 +2,11 @@ package com.lapcevichme.olympiadfinder.presentation.screens
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -44,6 +47,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -120,11 +124,21 @@ fun OlympiadListScreen(
         LazyListState()
     }
 
+    LaunchedEffect(currentPage, paginationMetadata.pageSize) {
+        println("OlympiadListScreen: Page or PageSize changed, scrolling to top.")
+        // Запускаем прокрутку к первому элементу при смене страницы.
+        // Это делается *после* того, как данные для новой страницы начали загружаться/появились,
+        // но до того, как пользователь может активно скроллить и вызвать конфликт состояний.
+        // scrollToItem(0) безопаснее во время переходов AnimatedContent.
+        listState.scrollToItem(index = 0)
+    }
+
+
     // Основной контент экрана
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
-        if (isLoading) {
+        if (isLoading && olympiads.isEmpty()) { // Показываем индикатор только если данных нет совсем
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -151,51 +165,96 @@ fun OlympiadListScreen(
                             SizeTransform(clip = false)
                         )
                     } else {
-                        println("типа нет анимации") // TODO: pls destroy me
-                        fadeIn() togetherWith fadeOut()
+                        EnterTransition.None togetherWith ExitTransition.None
                     }
                 },
                 label = "OlympiadListPageAnimation" // Метка для отладки
             ) { _ ->
-                LazyColumn(
-                    contentPadding = PaddingValues(all = 8.dp),
-                    state = listState
-                ) {
-                    items(
-                        items = olympiads,
-                        key = { olympiad -> olympiad.id }
-                    ) { olympiad ->
-                        AnimatedVisibility(
-                            visible = true,
-                            enter = fadeIn(
-                                animationSpec = tween(
-                                    durationMillis = 300,
-                                    delayMillis = 100
-                                )
-                            ), // Небольшая задержка
-                            modifier = Modifier.animateItemPlacement()
+                Column {
+                    if (olympiads.isNotEmpty()) {
+                        LazyColumn(
+                            contentPadding = PaddingValues(all = 8.dp),
+                            state = listState,
+                            modifier = Modifier.weight(1f)
                         ) {
-                            OlympiadItem(
-                                olympiad = olympiad,
-                                onClick = {
-                                    selectedOlympiad = olympiad
-                                    scope.launch { sheetState.show() }
+                            items(
+                                items = olympiads,
+                                key = { olympiad -> olympiad.id }
+                            ) { olympiad ->
 
-                                },
-                                animate = animateListItems
+                                val itemModifier = if (animateListItems) {
+                                    Modifier.animateItemPlacement()
+                                } else {
+                                    Modifier
+                                }
+
+                                if (animateListItems) {
+                                    // Используем AnimatedVisibility для анимации появления (FadeIn)
+                                    // Modifier.animateItemPlacement() ЗДЕСЬ БОЛЬШЕ НЕ ПРИМЕНЯЕМ
+                                    AnimatedVisibility(
+                                        visible = true, // Всегда true, т.к. мы управляем видимостью через if
+                                        enter = fadeIn(
+                                            animationSpec = tween(
+                                                durationMillis = 300,
+                                                delayMillis = 100 // Небольшая задержка для эффекта "наплыва"
+                                            )
+                                        ),
+                                        // exit можно не указывать
+                                        modifier = Modifier
+                                    ) {
+                                        OlympiadItem(
+                                            olympiad = olympiad,
+                                            onClick = {
+                                                selectedOlympiad = olympiad
+                                                scope.launch {
+                                                    sheetState.show() }
+                                            },
+                                            animate = true,
+                                            modifier = Modifier
+                                        )
+                                    }
+                                } else {
+                                    // Анимация выключена - просто показываем элемент
+                                    OlympiadItem(
+                                        olympiad = olympiad,
+                                        onClick = {
+                                            selectedOlympiad = olympiad
+                                            scope.launch { sheetState.show() }
+                                        },
+                                        animate = false, // Передаем false, чтобы отключить внутреннюю анимацию нажатия
+                                        modifier = itemModifier
+                                    )
+                                }
+                            }
+                        }
+
+                        // Индикатор загрузки внизу списка, когда грузится следующая страница
+                        if (isLoading && olympiads.isNotEmpty()) {
+                            LinearProgressIndicator(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp)
                             )
                         }
+                    } else if (!isLoading) {
+                        // Показываем сообщение, если список пуст и загрузка завершена
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Олимпиады не найдены.")
+                        }
                     }
-
-
                 }
             }
+
 
             if (paginationMetadata.totalPages > 0 && !isLoading) {
                 PaginationPanel(
                     currentPage = currentPage,
                     totalPages = paginationMetadata.totalPages,
-                    onPageChange = { viewModel.onPageChanged(it) }
+                    onPageChange = { viewModel.onPageChanged(it) },
+                    animateTransitions = animatePageTransitions
                 )
             }
 
@@ -291,7 +350,8 @@ fun OlympiadDetailsSheetContent(olympiad: Olympiad, onClose: () -> Unit) {
 fun PaginationPanel(
     currentPage: Int,
     totalPages: Int,
-    onPageChange: (Int) -> Unit
+    onPageChange: (Int) -> Unit,
+    animateTransitions: Boolean
 ) {
     if (totalPages <= 1) {
         return
@@ -308,19 +368,23 @@ fun PaginationPanel(
             onClick = { if (currentPage > 1) onPageChange(currentPage - 1) },
             enabled = currentPage > 1
         ) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous Page")
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Предыдущая страница")
         }
         Spacer(modifier = Modifier.width(16.dp))
         AnimatedContent(
             targetState = currentPage,
             transitionSpec = {
-                if (targetState > initialState) {
-                    slideInVertically { height -> height } + fadeIn() togetherWith
-                            slideOutVertically { height -> -height } + fadeOut()
+                if (animateTransitions) {
+                    if (targetState > initialState) {
+                        slideInVertically { height -> height } + fadeIn() togetherWith
+                                slideOutVertically { height -> -height } + fadeOut()
+                    } else {
+                        slideInVertically { height -> -height } + fadeIn() togetherWith
+                                slideOutVertically { height -> height } + fadeOut()
+                    }.using(SizeTransform(clip = false))
                 } else {
-                    slideInVertically { height -> -height } + fadeIn() togetherWith
-                            slideOutVertically { height -> height } + fadeOut()
-                }.using(SizeTransform(clip = false))
+                    EnterTransition.None togetherWith ExitTransition.None // <-- Отключение анимации
+                }
             },
             label = "PageNumberAnimation"
         ) { targetPage ->
@@ -335,35 +399,44 @@ fun PaginationPanel(
             onClick = { if (currentPage < totalPages) onPageChange(currentPage + 1) },
             enabled = currentPage < totalPages
         ) {
-            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Page")
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Следующая страница")
         }
     }
 }
 
 
 @Composable
-fun OlympiadItem(olympiad: Olympiad, onClick: () -> Unit, animate: Boolean) {
+fun OlympiadItem(
+    olympiad: Olympiad,
+    onClick: () -> Unit,
+    animate: Boolean,
+    modifier: Modifier = Modifier
+) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
+    // Анимируем scale только если общий флаг animate включен И элемент нажат
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.98f else 1.0f, // Немного сжимаем при нажатии
-        label = "OlympiadItemScale"
+        targetValue = if (isPressed && animate) 0.98f else 1.0f,
+        label = "OlympiadItemScale",
+
+        animationSpec = if (animate) tween(durationMillis = 100) else snap()
     )
 
     Card(
         onClick = onClick,
-        modifier = Modifier
+        // Применяем ПЕРЕДАННЫЙ модификатор первым, затем добавляем внутренние
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .then(
+            .then( // Добавляем условный graphicsLayer, если animate включен
                 if (animate) {
                     Modifier.graphicsLayer {
                         scaleX = scale
                         scaleY = scale
                     }
                 } else {
-                    Modifier
+                    Modifier // Если animate выключен, не применяем graphicsLayer
                 }
             ),
         interactionSource = interactionSource,
@@ -376,38 +449,26 @@ fun OlympiadItem(olympiad: Olympiad, onClick: () -> Unit, animate: Boolean) {
                 .padding(16.dp)
         ) {
             Text(text = olympiad.name, style = MaterialTheme.typography.headlineSmall)
+
             olympiad.subjects?.takeIf { it.isNotEmpty() }?.let { subjects ->
-                Text(
-                    text = "Предметы: ${subjects.joinToString { it.name }}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                Text(text = "Предметы: ${subjects.joinToString { it.name }}", style = MaterialTheme.typography.bodyMedium)
             } ?: Text(text = "Предметы: -", style = MaterialTheme.typography.bodyMedium)
 
-            olympiad.minGrade?.let { min ->
-                olympiad.maxGrade?.let { max ->
-                    Text(text = "Классы: $min - $max", style = MaterialTheme.typography.bodyMedium)
-                } ?: Text(text = "Класс: от $min", style = MaterialTheme.typography.bodyMedium)
-            } ?: olympiad.maxGrade?.let { max ->
-                Text(text = "Класс: до $max", style = MaterialTheme.typography.bodyMedium)
-            } ?: Text(text = "Классы: -", style = MaterialTheme.typography.bodyMedium)
+            val gradeRange = when {
+                olympiad.minGrade != null && olympiad.maxGrade != null -> "Классы: ${olympiad.minGrade} - ${olympiad.maxGrade}"
+                olympiad.minGrade != null -> "Класс: от ${olympiad.minGrade}"
+                olympiad.maxGrade != null -> "Класс: до ${olympiad.maxGrade}"
+                else -> "Классы: -"
+            }
+            Text(text = gradeRange, style = MaterialTheme.typography.bodyMedium)
 
             olympiad.stages?.takeIf { it.isNotEmpty() }?.let { stages ->
-                Text(
-                    text = "Этапы: ${stages.joinToString { it.name }}",
-                    style = MaterialTheme.typography.bodySmall
-                )
+                Text(text = "Этапы: ${stages.joinToString { it.name }}", style = MaterialTheme.typography.bodySmall)
             } ?: Text(text = "Этапы: -", style = MaterialTheme.typography.bodySmall)
 
-            // Убрал лишний Text и maxLines=2, чтобы описание было полным, если оно короткое
             olympiad.description?.takeIf { it.isNotBlank() }?.let { description ->
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodySmall
-                ) // Показываем полное описание
-            } ?: Text(
-                text = "Описание отсутствует",
-                style = MaterialTheme.typography.bodySmall
-            )
+                Text(text = description, style = MaterialTheme.typography.bodySmall)
+            } ?: Text(text = "Описание отсутствует", style = MaterialTheme.typography.bodySmall)
         }
     }
 }
