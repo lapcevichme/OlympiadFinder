@@ -1,6 +1,7 @@
 package com.lapcevichme.olympiadfinder.data.repository.impl
 
 import com.lapcevichme.olympiadfinder.data.local.PreferencesSettingsDataStore
+import com.lapcevichme.olympiadfinder.domain.model.AppFont
 import com.lapcevichme.olympiadfinder.domain.model.Theme
 import com.lapcevichme.olympiadfinder.domain.repository.SettingsRepository
 import kotlinx.coroutines.flow.Flow
@@ -43,5 +44,11 @@ class SettingsRepositoryImpl @Inject constructor(
         get() = settingsDataStore.animateThemeChangesPreference
     override suspend fun setAnimateThemeChangesPreference(enabled: Boolean) {
         settingsDataStore.saveAnimateThemeChangesPreference(enabled)
+    }
+
+    override val fontPreference: Flow<AppFont>
+        get() = settingsDataStore.fontPreference
+    override suspend fun setFontPreference(font: AppFont) {
+        settingsDataStore.saveFontPreference(font)
     }
 }

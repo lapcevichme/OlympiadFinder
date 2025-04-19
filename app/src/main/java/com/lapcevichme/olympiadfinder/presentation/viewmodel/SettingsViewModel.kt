@@ -3,9 +3,12 @@ package com.lapcevichme.olympiadfinder.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lapcevichme.olympiadfinder.data.local.DEFAULT_PAGE_SIZE
+import com.lapcevichme.olympiadfinder.domain.model.AppFont
 import com.lapcevichme.olympiadfinder.domain.model.Theme
+import com.lapcevichme.olympiadfinder.domain.usecases.settings.GetFontPreferenceUseCase
 import com.lapcevichme.olympiadfinder.domain.usecases.settings.GetPageSizePreferenceUseCase
 import com.lapcevichme.olympiadfinder.domain.usecases.settings.GetThemePreferenceUseCase
+import com.lapcevichme.olympiadfinder.domain.usecases.settings.SaveFontPreferenceUseCase
 import com.lapcevichme.olympiadfinder.domain.usecases.settings.SavePageSizePreferenceUseCase
 import com.lapcevichme.olympiadfinder.domain.usecases.settings.SaveThemePreferenceUseCase
 import com.lapcevichme.olympiadfinder.domain.usecases.settings.animations.GetAnimateListItemsUseCase
@@ -33,7 +36,10 @@ class SettingsViewModel @Inject constructor(
     getAnimateListItemsUseCase: GetAnimateListItemsUseCase,
     private val saveAnimateListItemsUseCase: SaveAnimateListItemsUseCase,
     getAnimateThemeChangesUseCase: GetAnimateThemeChangesUseCase,
-    private val saveAnimateThemeChangesUseCase: SaveAnimateThemeChangesUseCase
+    private val saveAnimateThemeChangesUseCase: SaveAnimateThemeChangesUseCase,
+    // --- Font Usecases ---
+    getFontPreferenceUseCase: GetFontPreferenceUseCase,
+    private val saveFontPreferenceUseCase: SaveFontPreferenceUseCase
 ) : ViewModel() {
 
     val currentTheme: StateFlow<Theme> = getThemePreferenceUseCase()
@@ -82,6 +88,20 @@ class SettingsViewModel @Inject constructor(
 
     fun setAnimateThemeChanges(enabled: Boolean) {
         viewModelScope.launch { saveAnimateThemeChangesUseCase(enabled) }
+    }
+
+    // StateFlow для текущего выбранного шрифта
+    val appFont: StateFlow<AppFont> = getFontPreferenceUseCase()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = AppFont.DEFAULT
+        )
+
+    fun changeFont(font: AppFont) {
+        viewModelScope.launch {
+            saveFontPreferenceUseCase(font)
+        }
     }
 
     fun clearCache() {

@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.lapcevichme.olympiadfinder.domain.model.AppFont
 import com.lapcevichme.olympiadfinder.domain.model.Theme
 import com.lapcevichme.olympiadfinder.presentation.viewmodel.SettingsViewModel
 
@@ -28,6 +29,9 @@ fun AppearanceSettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val currentTheme by viewModel.currentTheme.collectAsState()
+    val currentFont by viewModel.appFont.collectAsState()
+
+    val fontOptions = AppFont.entries.toList()
 
     Column(
         modifier = Modifier
@@ -60,8 +64,26 @@ fun AppearanceSettingsScreen(
 
         // TODO: Добавить другие настройки внешнего вида (шрифты и т.д.)
         Spacer(modifier = Modifier.height(16.dp))
+
+        Text("Шрифт приложения", style = MaterialTheme.typography.titleMedium)
+        Column(Modifier.selectableGroup()) {
+            fontOptions.forEach { fontOption ->
+
+                ThemeRadioButton(
+                    text = when(fontOption) {
+                        AppFont.DEFAULT -> "Стандартный"
+                        AppFont.SERIF -> "С засечками (Serif)"
+                        AppFont.MONOSPACE -> "Моноширинный (Monospace)"
+                    },
+                    selected = currentFont == fontOption,
+                    onClick = { viewModel.changeFont(fontOption) }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
         Text("Настройки шрифта (TODO)", style = MaterialTheme.typography.titleMedium)
-        // ... UI для шрифтов ...
+
     }
 }
 

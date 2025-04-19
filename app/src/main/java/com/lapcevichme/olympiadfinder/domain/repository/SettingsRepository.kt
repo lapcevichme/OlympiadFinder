@@ -1,5 +1,6 @@
 package com.lapcevichme.olympiadfinder.domain.repository
 
+import com.lapcevichme.olympiadfinder.domain.model.AppFont
 import com.lapcevichme.olympiadfinder.domain.model.Theme
 import kotlinx.coroutines.flow.Flow
 
@@ -19,6 +20,10 @@ interface SettingsRepository {
 
     val animateThemeChangesPreference: Flow<Boolean>
     suspend fun setAnimateThemeChangesPreference(enabled: Boolean)
+
+    // --- Font preferences ---
+    val fontPreference: Flow<AppFont>
+    suspend fun setFontPreference(font: AppFont)
 
     // suspend fun clearCache()
 }

@@ -30,8 +30,10 @@ class MainActivity : ComponentActivity() {
         setContent {
 
             val navController: NavHostController = rememberNavController()
+
             val currentTheme by mainViewModel.theme.collectAsState()
             val animateTheme by mainViewModel.animateThemeChanges.collectAsState()
+            val currentFont by mainViewModel.appFont.collectAsState()
 
             Crossfade(
                 targetState = currentTheme,
@@ -39,11 +41,13 @@ class MainActivity : ComponentActivity() {
                     tween(durationMillis = 500)
                 } else {
                     snap()
-                }
+                },
+                label = "ThemeCrossfade"
                 // modifier = Modifier.fillMaxSize() // Можно добавить, если нужно заполнение
             ) { themeState ->
                 OlympiadFinderTheme(
-                    dynamicTheme = themeState
+                    dynamicTheme = themeState,
+                    appFont = currentFont
                 ) {
                     Scaffold(
                         bottomBar = { BottomNavigationBar(navController = navController) }

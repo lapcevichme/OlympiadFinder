@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.lapcevichme.olympiadfinder.domain.model.AppFont
 import com.lapcevichme.olympiadfinder.domain.model.Theme
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -31,6 +32,9 @@ class PreferencesSettingsDataStore @Inject constructor(@ApplicationContext priva
         val ANIMATE_PAGE_TRANSITIONS = booleanPreferencesKey("animate_page_transitions")
         val ANIMATE_LIST_ITEMS = booleanPreferencesKey("animate_list_items")
         val ANIMATE_THEME_CHANGES = booleanPreferencesKey("animate_theme_changes")
+
+        // --- Font preferences ---
+        val FONT_PREFERENCE_KEY = stringPreferencesKey("app_font")
     }
 
     // Flow для темы
@@ -84,6 +88,18 @@ class PreferencesSettingsDataStore @Inject constructor(@ApplicationContext priva
         context.dataStore.edit { it[PreferencesKeys.ANIMATE_THEME_CHANGES] = enabled }
     }
 
+    // --- Flows & Savers for font preferences ---
+    val fontPreference: Flow<AppFont> = context.dataStore.data
+        .map { preferences ->
+            // Читаем строку по ключу, преобразуем ее в AppFont с помощью fromKey
+            AppFont.fromKey(preferences[PreferencesKeys.FONT_PREFERENCE_KEY])
+        }
+
+    suspend fun saveFontPreference(font: AppFont) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.FONT_PREFERENCE_KEY] = font.key
+        }
+    }
 
     suspend fun clearAppCache() {
         println("App cache clearing requested...")

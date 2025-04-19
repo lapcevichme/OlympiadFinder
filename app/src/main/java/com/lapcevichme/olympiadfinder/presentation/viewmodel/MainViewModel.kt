@@ -2,7 +2,9 @@ package com.lapcevichme.olympiadfinder.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lapcevichme.olympiadfinder.domain.model.AppFont
 import com.lapcevichme.olympiadfinder.domain.model.Theme
+import com.lapcevichme.olympiadfinder.domain.usecases.settings.GetFontPreferenceUseCase
 import com.lapcevichme.olympiadfinder.domain.usecases.settings.GetThemePreferenceUseCase
 import com.lapcevichme.olympiadfinder.domain.usecases.settings.animations.GetAnimateThemeChangesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,7 +16,8 @@ import javax.inject.Inject
 @HiltViewModel
 class MainViewModel @Inject constructor(
     getThemePreferenceUseCase: GetThemePreferenceUseCase,
-    getAnimateThemeChangesUseCase: GetAnimateThemeChangesUseCase
+    getAnimateThemeChangesUseCase: GetAnimateThemeChangesUseCase,
+    getFontPreferenceUseCase: GetFontPreferenceUseCase
 ) : ViewModel() {
 
     // Expose the theme preference for the MainActivity/Root composable
@@ -27,5 +30,12 @@ class MainViewModel @Inject constructor(
 
     val animateThemeChanges: StateFlow<Boolean> = getAnimateThemeChangesUseCase()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val appFont: StateFlow<AppFont> = getFontPreferenceUseCase()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = AppFont.DEFAULT
+        )
 
 }
