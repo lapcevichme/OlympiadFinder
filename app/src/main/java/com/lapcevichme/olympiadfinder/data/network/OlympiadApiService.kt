@@ -1,9 +1,11 @@
 package com.lapcevichme.olympiadfinder.data.network
 
 import com.lapcevichme.olympiadfinder.data.network.model.NetworkOlympiad
+import com.lapcevichme.olympiadfinder.data.network.model.NetworkPaginatedResponse
 import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 
 interface OlympiadApiService {
@@ -12,4 +14,11 @@ interface OlympiadApiService {
 
     @GET("/api/olympiads/{id}")
     suspend fun getOlympiadById(@Path("id") id: Long): Response<NetworkOlympiad>
+
+    @GET("/api/olympiads")
+    suspend fun getPaginatedOlympiads(
+        @Query("page") page: Int,
+        @Query("pageSize") pageSize: Int,
+        @Query("query") query: String? = null
+    ): Response<NetworkPaginatedResponse<NetworkOlympiad>>
 }

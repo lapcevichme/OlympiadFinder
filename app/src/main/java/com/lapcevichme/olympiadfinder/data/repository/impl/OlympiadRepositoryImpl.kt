@@ -3,8 +3,10 @@ package com.lapcevichme.olympiadfinder.data.repository.impl
 import com.lapcevichme.olympiadfinder.data.network.OlympiadApiService
 import com.lapcevichme.olympiadfinder.data.network.model.NetworkOlympiad
 import com.lapcevichme.olympiadfinder.data.network.model.NetworkStage
-import com.lapcevichme.olympiadfinder.data.repository.mock.PaginatedResponse
+import com.lapcevichme.olympiadfinder.data.network.model.toDomain
 import com.lapcevichme.olympiadfinder.domain.model.Olympiad
+import com.lapcevichme.olympiadfinder.domain.model.PaginatedResponse
+import com.lapcevichme.olympiadfinder.domain.model.PaginationMetadata
 import com.lapcevichme.olympiadfinder.domain.model.Stage
 import com.lapcevichme.olympiadfinder.domain.model.Subject
 import com.lapcevichme.olympiadfinder.domain.repository.OlympiadRepository
@@ -27,18 +29,46 @@ class OlympiadRepositoryImpl @Inject constructor(
             val networkOlympiads = response.body() ?: emptyList()
             emit(networkOlympiads.map { it.toDomain() })
         } else {
-            // Обработка ошибки
             val errorBody = response.errorBody()?.string()
-            val errorMessage = "Ошибка при загрузке олимпиад: ${response.code()} - ${response.message()}"
-
+            val errorMessage = "Ошибка при загрузке всех олимпиад: ${response.code()} - ${response.message()}"
+            println(errorMessage)
             throw HttpException(response)
         }
-    }.catch {
+    }.catch { e ->
+        println("OlympiadRepositoryImpl: Exception during getAllOlympiads Flow: ${e.message}")
         emit(emptyList())
+        // Можно также перебросить исключение: throw e
     }
 
-    override fun getOlympiads(page: Int, pageSize: Int): Flow<PaginatedResponse<Olympiad>> {
-        TODO("Not yet implemented")
+
+    override fun getOlympiads(page: Int, pageSize: Int, query: String?): Flow<PaginatedResponse<Olympiad>> = flow {
+        val response = olympiadApiService.getPaginatedOlympiads(
+            page = page,
+            pageSize = pageSize,
+            query = query
+        )
+
+        if (response.isSuccessful) {
+            val networkResponse = response.body()
+            if (networkResponse?.items != null) {
+                val domainItems = networkResponse.items.map { it.toDomain() }
+                val domainMeta = networkResponse.meta.toDomain()
+
+                emit(PaginatedResponse(items = domainItems, meta = domainMeta))
+            } else {
+                println("OlympiadRepositoryImpl: Received successful response but body or its parts were null/empty.")
+                emit(PaginatedResponse(emptyList(), PaginationMetadata(0, 1, page, pageSize)))
+            }
+        } else {
+            val errorBody = response.errorBody()?.string()
+            val errorMessage = "Ошибка при загрузке олимпиад (пагинация/поиск): ${response.code()} - ${response.message()} Error body: $errorBody"
+            println(errorMessage)
+            throw HttpException(response)
+        }
+    }.catch { e ->
+        println("OlympiadRepositoryImpl: Exception during getOlympiads Flow: ${e.message}")
+        emit(PaginatedResponse(emptyList(), PaginationMetadata(0, 1, page, pageSize)))
+        // throw e
     }
 
 

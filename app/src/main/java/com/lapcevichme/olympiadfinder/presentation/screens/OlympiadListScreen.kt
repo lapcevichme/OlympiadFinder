@@ -32,10 +32,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -44,6 +46,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -58,10 +61,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.compose.rememberNavController
 import com.lapcevichme.olympiadfinder.domain.model.Olympiad
 import com.lapcevichme.olympiadfinder.domain.model.Stage
 import com.lapcevichme.olympiadfinder.domain.model.Subject
@@ -72,7 +76,7 @@ import java.time.LocalDate
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun OlympiadListScreen(
-    viewModel: OlympiadListViewModel = hiltViewModel(rememberNavController().getBackStackEntry("main_graph"))
+    viewModel: OlympiadListViewModel = hiltViewModel()
 ) {
     println("OlympiadListScreen: ViewModel hashCode = ${viewModel.hashCode()}")
 
@@ -84,6 +88,9 @@ fun OlympiadListScreen(
     // animations
     val animatePageTransitions by viewModel.animatePageTransitions.collectAsState()
     val animateListItems by viewModel.animateListItems.collectAsState()
+
+    // search
+    val searchQuery by viewModel.searchQuery.collectAsState()
 
     println("OlympiadListScreen: olympiads.size = ${olympiads.size}")
     println("OlympiadListScreen: paginationMetadata = $paginationMetadata")
@@ -138,6 +145,37 @@ fun OlympiadListScreen(
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
+        OutlinedTextField(
+            value = searchQuery, // Связываем значение поля с StateFlow в ViewModel
+            onValueChange = { viewModel.onSearchQueryChanged(it) }, // При вводе текста вызываем функцию ViewModel
+            label = { Text("Поиск олимпиад...") }, // Лейбл поля
+            singleLine = true, // В одну строку
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Search,
+                    contentDescription = "Иконка поиска"
+                )
+            }, // Иконка поиска слева
+            trailingIcon = { // Иконка "очистить" справа, если есть текст
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { viewModel.onSearchQueryChanged("") }) { // При клике очищаем запрос через ViewModel
+                        Icon(Icons.Default.Close, contentDescription = "Очистить поиск")
+                    }
+                }
+                // TODO: Здесь можно добавить иконку фильтров
+            },
+            keyboardOptions = KeyboardOptions(
+                imeAction = ImeAction.Search, // Кнопка "Поиск" на клавиатуре
+                capitalization = KeyboardCapitalization.Words // Или другое
+            ),
+            // Опционально: Если нужно реагировать именно на нажатие "Поиск" на клавиатуре, а не на debounce
+            // keyboardActions = KeyboardActions(onSearch = { /* Выполнить действие, если нужно */ }),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
+        )// Растягиваем на всю ширину
+
+
         if (isLoading && olympiads.isEmpty()) { // Показываем индикатор только если данных нет совсем
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -207,7 +245,8 @@ fun OlympiadListScreen(
                                             onClick = {
                                                 selectedOlympiad = olympiad
                                                 scope.launch {
-                                                    sheetState.show() }
+                                                    sheetState.show()
+                                                }
                                             },
                                             animate = true,
                                             modifier = Modifier
@@ -236,13 +275,19 @@ fun OlympiadListScreen(
                                     .padding(horizontal = 8.dp)
                             )
                         }
-                    } else if (!isLoading) {
-                        // Показываем сообщение, если список пуст и загрузка завершена
+                    } else {
+                        // Показываем сообщение, если список пуст после загрузки
                         Box(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.fillMaxSize().weight(1f), // Занимает оставшееся место
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("Олимпиады не найдены.")
+                            // Сообщение зависит от того, был ли поисковый запрос или активны ли фильтры
+                            // TODO: Добавить проверку активных фильтров
+                            if (searchQuery.isNotEmpty() /* || активны фильтры */) {
+                                Text("Ничего не найдено по запросу \"$searchQuery\".")
+                            } else {
+                                Text("Олимпиады не найдены.") // Сообщение, если список пуст без поиска/фильтров
+                            }
                         }
                     }
                 }
@@ -451,7 +496,10 @@ fun OlympiadItem(
             Text(text = olympiad.name, style = MaterialTheme.typography.headlineSmall)
 
             olympiad.subjects?.takeIf { it.isNotEmpty() }?.let { subjects ->
-                Text(text = "Предметы: ${subjects.joinToString { it.name }}", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = "Предметы: ${subjects.joinToString { it.name }}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
             } ?: Text(text = "Предметы: -", style = MaterialTheme.typography.bodyMedium)
 
             val gradeRange = when {
@@ -463,7 +511,10 @@ fun OlympiadItem(
             Text(text = gradeRange, style = MaterialTheme.typography.bodyMedium)
 
             olympiad.stages?.takeIf { it.isNotEmpty() }?.let { stages ->
-                Text(text = "Этапы: ${stages.joinToString { it.name }}", style = MaterialTheme.typography.bodySmall)
+                Text(
+                    text = "Этапы: ${stages.joinToString { it.name }}",
+                    style = MaterialTheme.typography.bodySmall
+                )
             } ?: Text(text = "Этапы: -", style = MaterialTheme.typography.bodySmall)
 
             olympiad.description?.takeIf { it.isNotBlank() }?.let { description ->
