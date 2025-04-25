@@ -41,16 +41,17 @@ class MockOlympiadRepositoryImpl @Inject constructor() : OlympiadRepository {
     override fun getOlympiads(
         page: Int,
         pageSize: Int,
-        query: String?
+        query: String?,
+        selectedGrades: List<Int>
     ): Flow<PaginatedResponse<Olympiad>> = flow {
 
-        val filteredOlympiads = if (query.isNullOrBlank()) {
-            // Если запрос пуст или null, используем полный список
-            allOlympiads
-        } else {
-            val lowerCaseQuery = query.lowercase()
+        // Начинаем с полного списка
+        var currentFilteredList = allOlympiads
 
-            allOlympiads.filter { olympiad ->
+        // 1. Применяем фильтрацию по запросу, если он есть
+        if (!query.isNullOrBlank()) {
+            val lowerCaseQuery = query.lowercase()
+            currentFilteredList = currentFilteredList.filter { olympiad ->
                 olympiad.name.lowercase().contains(lowerCaseQuery) ||
                         olympiad.description.orEmpty().lowercase().contains(lowerCaseQuery) ||
                         olympiad.keywords.orEmpty().lowercase().contains(lowerCaseQuery) ||
@@ -60,26 +61,42 @@ class MockOlympiadRepositoryImpl @Inject constructor() : OlympiadRepository {
             }
         }
 
-        // Применяем пагинацию к ОТФИЛЬТРОВАННОМУ списку
-        val totalItems = filteredOlympiads.size // Общее количество элементов после фильтрации
-        val totalPages = (totalItems + pageSize - 1) / pageSize // Общее количество страниц для отфильтрованного списка (округление вверх)
-
-        // Рассчитываем индексы для текущей страницы в ОТФИЛЬТРОВАННОМ списке
-        val startIndex = (page - 1) * pageSize
-        val endIndex = minOf(startIndex + pageSize, totalItems)
-
-        // Получаем элементы для текущей страницы из ОТФИЛЬТРОВАННОГО списка
-        // Проверяем, что startIndex не выходит за пределы списка и что startIndex < endIndex
-        val currentPageItems = if (startIndex < totalItems) {
-            filteredOlympiads.subList(startIndex, endIndex)
-        } else {
-            emptyList() // Если запрошенная страница за пределами или список пуст
+        // <-- НОВОЕ: 2. Применяем фильтрацию по выбранным классам, если они есть
+        if (selectedGrades.isNotEmpty()) {
+            currentFilteredList = currentFilteredList.filter { olympiad ->
+                // Олимпиада подходит, если хотя бы один выбранный класс попадает в диапазон ее minGrade-maxGrade
+                // Обрабатываем случай, когда minGrade или maxGrade у олимпиады null
+                if (olympiad.minGrade == null || olympiad.maxGrade == null) {
+                    // Если у олимпиады не указан диапазон классов, она не подходит под конкретный фильтр по классу
+                    false
+                } else {
+                    // Проверяем, что диапазон олимпиады (minGrade - maxGrade) пересекается с любым из selectedGrades
+                    selectedGrades.any { selectedGrade ->
+                        selectedGrade >= olympiad.minGrade && selectedGrade <= olympiad.maxGrade
+                    }
+                }
+            }
         }
 
 
-        // Создаем PaginatedResponse с данными и метаданными ОТФИЛЬТРОВАННОГО списка
+        // 3. Применяем пагинацию к ТЕКУЩЕМУ ОТФИЛЬТРОВАННОМУ списку (после поиска и фильтров по классам)
+        val totalItems = currentFilteredList.size // Общее количество элементов после всех фильтров
+        val totalPages = (totalItems + pageSize - 1) / pageSize
+
+        val startIndex = (page - 1) * pageSize
+        val safeStartIndex = maxOf(0, startIndex)
+        val endIndex = minOf(safeStartIndex + pageSize, totalItems)
+
+        val currentPageItems = if (safeStartIndex < endIndex) {
+            currentFilteredList.subList(safeStartIndex, endIndex)
+        } else {
+            emptyList()
+        }
+
+
+        // 4. Создаем PaginatedResponse с данными и метаданными ТЕКУЩЕГО ОТФИЛЬТРОВАННОГО списка
         val response = PaginatedResponse(
-            items = currentPageItems, // Элементы для текущей страницы
+            items = currentPageItems,
             meta = PaginationMetadata(
                 totalItems = totalItems,
                 totalPages = totalPages,
@@ -88,10 +105,8 @@ class MockOlympiadRepositoryImpl @Inject constructor() : OlympiadRepository {
             )
         )
 
-        // Добавим небольшую задержку, чтобы имитировать сетевой запрос при тестировании UI
         // kotlinx.coroutines.delay(200)
 
-        // Эмитируем сформированный ответ
         emit(response)
     }
 

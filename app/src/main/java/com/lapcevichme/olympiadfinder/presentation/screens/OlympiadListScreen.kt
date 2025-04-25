@@ -21,6 +21,8 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -37,15 +39,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -92,6 +98,10 @@ fun OlympiadListScreen(
     // search
     val searchQuery by viewModel.searchQuery.collectAsState()
 
+    val availableGrades = viewModel.availableGrades
+
+    val filtersUiState by viewModel.filtersUiState.collectAsState()
+
     println("OlympiadListScreen: olympiads.size = ${olympiads.size}")
     println("OlympiadListScreen: paginationMetadata = $paginationMetadata")
     println("OlympiadListScreen: currentPage = $currentPage")
@@ -103,6 +113,15 @@ fun OlympiadListScreen(
         skipPartiallyExpanded = true
     )
     val scope = rememberCoroutineScope()
+
+    var showFilterSheet by remember { mutableStateOf(false) }
+    val filterSheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true
+    )
+
+    val listState: LazyListState = rememberSaveable(saver = LazyListState.Saver) {
+        LazyListState()
+    }
 
     // Показываем BottomSheet только если олимпиада выбрана
     if (selectedOlympiad != null) {
@@ -127,8 +146,51 @@ fun OlympiadListScreen(
         )
     }
 
-    val listState: LazyListState = rememberSaveable(saver = LazyListState.Saver) {
-        LazyListState()
+    // BottomSheet для выбора фильтров
+    if (showFilterSheet) {
+        ModalBottomSheet(
+            sheetState = filterSheetState,
+            onDismissRequest = {
+                viewModel.discardFilterChanges() // Сбрасывает UI состояние к активным фильтрам
+                showFilterSheet = false // Скрывает лист
+            },
+            content = {
+                FilterBottomSheetContent(
+                    availableGrades = availableGrades,
+                    selectedGrades = filtersUiState.selectedGrades, // Передаем выбранные классы ИЗ СОСТОЯНИЯ UI ЛИСТА
+                    onGradeSelected = { grade, isSelected ->
+                        viewModel.onGradeFilterUiChanged(grade, isSelected) // Обновляет СОСТОЯНИЕ UI ЛИСТА
+                    },
+                    // TODO: Добавить параметры для фильтров по предметам
+
+                    // Колбэк для кнопки "Применить"
+                    onApplyFilters = {
+                        viewModel.applyFilters() // Вызываем ViewModel для ПРИМЕНЕНИЯ фильтров
+                        // Скрываем лист после применения
+                        scope.launch {
+                            filterSheetState.hide()
+                        }.invokeOnCompletion {
+                            if (!filterSheetState.isVisible) {
+                                showFilterSheet = false
+                            }
+                        }
+                    },
+
+                    // <-- ИСПРАВЛЕНИЕ: Колбэк для кнопки "Сбросить"
+                    onResetFilters = {
+                        viewModel.resetAndApplyFilters() // Вызываем ViewModel для СБРОСА И ПРИМЕНЕНИЯ фильтров
+                        // Скрываем лист после сброса и применения
+                        scope.launch {
+                            filterSheetState.hide()
+                        }.invokeOnCompletion {
+                            if (!filterSheetState.isVisible) {
+                                showFilterSheet = false
+                            }
+                        }
+                    }
+                )
+            }
+        )
     }
 
     LaunchedEffect(currentPage, paginationMetadata.pageSize) {
@@ -145,36 +207,42 @@ fun OlympiadListScreen(
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
-        OutlinedTextField(
-            value = searchQuery, // Связываем значение поля с StateFlow в ViewModel
-            onValueChange = { viewModel.onSearchQueryChanged(it) }, // При вводе текста вызываем функцию ViewModel
-            label = { Text("Поиск олимпиад...") }, // Лейбл поля
-            singleLine = true, // В одну строку
-            leadingIcon = {
-                Icon(
-                    Icons.Default.Search,
-                    contentDescription = "Иконка поиска"
-                )
-            }, // Иконка поиска слева
-            trailingIcon = { // Иконка "очистить" справа, если есть текст
-                if (searchQuery.isNotEmpty()) {
-                    IconButton(onClick = { viewModel.onSearchQueryChanged("") }) { // При клике очищаем запрос через ViewModel
-                        Icon(Icons.Default.Close, contentDescription = "Очистить поиск")
-                    }
-                }
-                // TODO: Здесь можно добавить иконку фильтров
-            },
-            keyboardOptions = KeyboardOptions(
-                imeAction = ImeAction.Search, // Кнопка "Поиск" на клавиатуре
-                capitalization = KeyboardCapitalization.Words // Или другое
-            ),
-            // Опционально: Если нужно реагировать именно на нажатие "Поиск" на клавиатуре, а не на debounce
-            // keyboardActions = KeyboardActions(onSearch = { /* Выполнить действие, если нужно */ }),
+        // Search Bar Row
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
-        )// Растягиваем на всю ширину
+                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Поле ввода поискового запроса
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { viewModel.onSearchQueryChanged(it) },
+                label = { Text("Поиск олимпиад...") },
+                singleLine = true,
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Иконка поиска") },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { viewModel.onSearchQueryChanged("") }) {
+                            Icon(Icons.Default.Close, contentDescription = "Очистить поиск")
+                        }
+                    }
+                },
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Search,
+                    capitalization = KeyboardCapitalization.Words
+                ),
+                modifier =
+                    Modifier.weight(1f) // Занимает все доступное место, кроме кнопки фильтров
+            )
 
+            // Кнопка фильтров
+            IconButton(onClick = {
+                showFilterSheet = true
+            }) { // Показываем BottomSheet с фильтрами при клике
+                Icon(Icons.Default.Menu, contentDescription = "Фильтры")
+            }
+        }
 
         if (isLoading && olympiads.isEmpty()) { // Показываем индикатор только если данных нет совсем
             Box(
@@ -278,15 +346,20 @@ fun OlympiadListScreen(
                     } else {
                         // Показываем сообщение, если список пуст после загрузки
                         Box(
-                            modifier = Modifier.fillMaxSize().weight(1f), // Занимает оставшееся место
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .weight(1f), // Занимает оставшееся место
                             contentAlignment = Alignment.Center
                         ) {
-                            // Сообщение зависит от того, был ли поисковый запрос или активны ли фильтры
-                            // TODO: Добавить проверку активных фильтров
-                            if (searchQuery.isNotEmpty() /* || активны фильтры */) {
-                                Text("Ничего не найдено по запросу \"$searchQuery\".")
+                            val hasActiveFilters =
+                                viewModel.selectedGrades.collectAsState().value.isNotEmpty()
+                            val hasActiveSearch =
+                                viewModel.searchQuery.collectAsState().value.isNotEmpty()
+
+                            if (hasActiveSearch || hasActiveFilters /* || active subjects */) {
+                                Text("Ничего не найдено по вашему запросу или фильтрам.")
                             } else {
-                                Text("Олимпиады не найдены.") // Сообщение, если список пуст без поиска/фильтров
+                                Text("Олимпиады не найдены.")
                             }
                         }
                     }
@@ -390,6 +463,73 @@ fun OlympiadDetailsSheetContent(olympiad: Olympiad, onClose: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun FilterBottomSheetContent(
+    availableGrades: List<Int>,
+    selectedGrades: List<Int>,
+    onGradeSelected: (grade: Int, isSelected: Boolean) -> Unit,
+    // TODO: Параметры для фильтров по предметам
+    onApplyFilters: () -> Unit, // Функция, вызываемая при нажатии кнопки "Применить"
+    onResetFilters: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Text("Фильтры", style = MaterialTheme.typography.headlineSmall)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Раздел "Класс участия"
+        Text("Класс участия", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(8.dp))
+        FlowRow( // Используем FlowRow для автоматического переноса элементов
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp), // Горизонтальные отступы
+            verticalArrangement = Arrangement.spacedBy(4.dp) // Вертикальные отступы
+        ) {
+            availableGrades.forEach { grade ->
+                FilterChip( // Используем FilterChip для выбора
+                    selected = grade in selectedGrades, // Чип выбран, если класс есть в selectedGrades
+                    onClick = {
+                        onGradeSelected(
+                            grade,
+                            grade !in selectedGrades
+                        ) // Переключаем состояние выбора
+                    },
+                    label = { Text(grade.toString()) }
+                )
+            }
+        }
+
+        // TODO: Раздел "Предметы"
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Кнопки "Сбросить" и "Применить"
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(
+                onClick = onResetFilters, // Вызываем функцию сброса UI состояния
+                modifier = Modifier.weight(1f) // Растягиваем кнопку
+            ) {
+                Text("Сбросить")
+            }
+            Button(
+                onClick = onApplyFilters, // Вызываем функцию применения фильтров (она также закроет лист)
+                modifier = Modifier.weight(1f) // Растягиваем кнопку
+            ) {
+                Text("Применить")
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp)) // Отступ снизу
+
+    }
+}
+
 
 @Composable
 fun PaginationPanel(
@@ -413,7 +553,10 @@ fun PaginationPanel(
             onClick = { if (currentPage > 1) onPageChange(currentPage - 1) },
             enabled = currentPage > 1
         ) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Предыдущая страница")
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Предыдущая страница"
+            )
         }
         Spacer(modifier = Modifier.width(16.dp))
         AnimatedContent(
@@ -444,7 +587,10 @@ fun PaginationPanel(
             onClick = { if (currentPage < totalPages) onPageChange(currentPage + 1) },
             enabled = currentPage < totalPages
         ) {
-            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Следующая страница")
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = "Следующая страница"
+            )
         }
     }
 }

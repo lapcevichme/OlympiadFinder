@@ -41,19 +41,24 @@ class OlympiadRepositoryImpl @Inject constructor(
     }
 
 
-    override fun getOlympiads(page: Int, pageSize: Int, query: String?): Flow<PaginatedResponse<Olympiad>> = flow {
+    override fun getOlympiads(page: Int, pageSize: Int, query: String?, selectedGrades: List<Int>): Flow<PaginatedResponse<Olympiad>> = flow {
+        // Выполняем сетевой запрос
         val response = olympiadApiService.getPaginatedOlympiads(
             page = page,
             pageSize = pageSize,
-            query = query
+            query = query,
+            // <-- НОВОЕ: Передаем список выбранных классов
+            // Если список пуст, API должен это обработать как "без фильтра по классам"
+            selectedGrades = if (selectedGrades.isEmpty()) null else selectedGrades
         )
 
         if (response.isSuccessful) {
             val networkResponse = response.body()
-            if (networkResponse?.items != null) {
+            if (networkResponse != null && networkResponse.items != null && networkResponse.meta != null) {
                 val domainItems = networkResponse.items.map { it.toDomain() }
                 val domainMeta = networkResponse.meta.toDomain()
 
+                // Эмитируем результат в виде твоего доменного класса PaginatedResponse
                 emit(PaginatedResponse(items = domainItems, meta = domainMeta))
             } else {
                 println("OlympiadRepositoryImpl: Received successful response but body or its parts were null/empty.")
@@ -61,7 +66,7 @@ class OlympiadRepositoryImpl @Inject constructor(
             }
         } else {
             val errorBody = response.errorBody()?.string()
-            val errorMessage = "Ошибка при загрузке олимпиад (пагинация/поиск): ${response.code()} - ${response.message()} Error body: $errorBody"
+            val errorMessage = "Ошибка при загрузке олимпиад (пагинация/поиск/фильтры): ${response.code()} - ${response.message()} Error body: $errorBody"
             println(errorMessage)
             throw HttpException(response)
         }
@@ -70,6 +75,7 @@ class OlympiadRepositoryImpl @Inject constructor(
         emit(PaginatedResponse(emptyList(), PaginationMetadata(0, 1, page, pageSize)))
         // throw e
     }
+
 
 
     // Extension function для маппинга NetworkOlympiad в Domain Olympiad

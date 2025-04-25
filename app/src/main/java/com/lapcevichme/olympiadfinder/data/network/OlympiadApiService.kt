@@ -19,6 +19,8 @@ interface OlympiadApiService {
     suspend fun getPaginatedOlympiads(
         @Query("page") page: Int,
         @Query("pageSize") pageSize: Int,
-        @Query("query") query: String? = null
+        @Query("query") query: String? = null,
+        @Query("grade") selectedGrades: List<Int>? = null
     ): Response<NetworkPaginatedResponse<NetworkOlympiad>>
+
 }
