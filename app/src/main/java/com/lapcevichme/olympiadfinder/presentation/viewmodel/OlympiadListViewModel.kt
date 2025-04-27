@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -99,6 +100,18 @@ class OlympiadListViewModel @Inject constructor(
 
     init {
         println("OlympiadListViewModel: ViewModel hashcode: ${this.hashCode()}")
+
+        // Фикс бага с номером страницы при изменении ее размера в настройках
+        pageSize
+            .drop(1) // Пропускаем первое значение при создании ViewModel. Реагируем только на ИЗМЕНЕНИЯ.
+            .onEach { newSize ->
+                println("ViewModel: Page size changed to $newSize. Resetting page to 1.")
+                // Сбрасываем ЗАПРОШЕННУЮ и ОТОБРАЖАЕМУЮ страницы на 1
+                _currentPage.value = 1
+                _displayedPage.value = 1
+                // combine Flow, который наблюдает за _currentPage, увидит это изменение и инициирует новую загрузку с новым pageSize и страницей 1.
+            }
+            .launchIn(viewModelScope)
 
         val loadParamsFlow = combine(
             _currentPage, // Реагируем на смену ЗАПРОШЕННОЙ страницы
