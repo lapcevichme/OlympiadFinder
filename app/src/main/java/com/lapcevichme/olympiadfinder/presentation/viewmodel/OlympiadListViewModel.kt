@@ -106,9 +106,8 @@ class OlympiadListViewModel @Inject constructor(
             .drop(1) // Пропускаем первое значение при создании ViewModel. Реагируем только на ИЗМЕНЕНИЯ.
             .onEach { newSize ->
                 println("ViewModel: Page size changed to $newSize. Resetting page to 1.")
-                // Сбрасываем ЗАПРОШЕННУЮ и ОТОБРАЖАЕМУЮ страницы на 1
+                // Сбрасываем ЗАПРОШЕННУЮ страницу на 1
                 _currentPage.value = 1
-                _displayedPage.value = 1
                 // combine Flow, который наблюдает за _currentPage, увидит это изменение и инициирует новую загрузку с новым pageSize и страницей 1.
             }
             .launchIn(viewModelScope)
@@ -170,7 +169,7 @@ class OlympiadListViewModel @Inject constructor(
     fun onSearchQueryChanged(newQuery: String) {
         _searchQuery.value = newQuery // Обновляем только поисковый запрос
         _currentPage.value = 1 // Сбрасываем пагинацию, т.к. результаты поиска новые
-        _displayedPage.value = 1
+
         println("ViewModel: Search query changed. Filters preserved. Reset page to 1.")
     }
 
@@ -298,7 +297,6 @@ class OlympiadListViewModel @Inject constructor(
         // Сбрасываем UI состояние фильтров к дефолту, чтобы при следующем открытии они были чистыми
         _filtersUiState.value = FilterUiState()
         _currentPage.value = 1
-        _displayedPage.value = 1
 
         println("ViewModel: Filters reset and applied. Active selected grades: ${_selectedGrades.value}. Active page: ${_currentPage.value}")
     }
