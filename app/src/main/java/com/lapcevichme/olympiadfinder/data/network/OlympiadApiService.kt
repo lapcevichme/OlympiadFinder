@@ -20,7 +20,7 @@ interface OlympiadApiService {
         @Query("page") page: Int,
         @Query("pageSize") pageSize: Int,
         @Query("query") query: String? = null,
-        @Query("grade") selectedGrades: List<Int>? = null
+        @Query("grade") grade: List<Int>? = null
     ): Response<NetworkPaginatedResponse<NetworkOlympiad>>
 
 }

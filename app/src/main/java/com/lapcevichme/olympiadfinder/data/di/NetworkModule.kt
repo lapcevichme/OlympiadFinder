@@ -19,15 +19,18 @@ object NetworkModule {
     @Singleton
     fun provideGson(): Gson {
         return GsonBuilder()
-            .setDateFormat("yyyy-MM-dd") // TODO: sync with api
+            .setDateFormat("yyyy-MM-dd")
             .create()
     }
+
+    // emulator : http://10.0.2.2:8080
+    // device : http://192.168.3.6:8080
 
     @Provides
     @Singleton
     fun provideRetrofit(gson: Gson): Retrofit {
         return Retrofit.Builder()
-            .baseUrl("https://api.example.com/v1/") // TODO: Create api host
+            .baseUrl("http://10.0.2.2:8080")
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
     }

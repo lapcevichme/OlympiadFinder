@@ -367,7 +367,7 @@ fun OlympiadListScreen(
             }
 
 
-            if (paginationMetadata.totalPages > 0 && !isLoading) {
+            if (paginationMetadata.totalPages > 1) {
                 PaginationPanel(
                     currentPage = currentPage,
                     totalPages = paginationMetadata.totalPages,

@@ -47,21 +47,23 @@ class OlympiadRepositoryImpl @Inject constructor(
             page = page,
             pageSize = pageSize,
             query = query,
-            // <-- НОВОЕ: Передаем список выбранных классов
-            // Если список пуст, API должен это обработать как "без фильтра по классам"
-            selectedGrades = if (selectedGrades.isEmpty()) null else selectedGrades
+            grade = if (selectedGrades.isEmpty()) null else selectedGrades
         )
 
         if (response.isSuccessful) {
-            val networkResponse = response.body()
-            if (networkResponse != null && networkResponse.items != null && networkResponse.meta != null) {
+            val networkResponse = response.body() // Получаем NetworkPaginatedResponse (теперь с meta)
+            // Проверяем, что тело ответа и его содержимое не null
+            if (networkResponse?.meta != null) { // <-- Проверяем на null и items, и meta
+                // Маппим список NetworkOlympiad -> List<Olympiad>
                 val domainItems = networkResponse.items.map { it.toDomain() }
+
                 val domainMeta = networkResponse.meta.toDomain()
 
-                // Эмитируем результат в виде твоего доменного класса PaginatedResponse
+                // Эмитируем доменную PaginatedResponse<Olympiad>
                 emit(PaginatedResponse(items = domainItems, meta = domainMeta))
             } else {
-                println("OlympiadRepositoryImpl: Received successful response but body or its parts were null/empty.")
+                println("OlympiadRepositoryImpl: Received successful response but body, items, or meta were null/empty.")
+                // Т.к. нет сетевых метаданных, создаем доменные на основе запроса
                 emit(PaginatedResponse(emptyList(), PaginationMetadata(0, 1, page, pageSize)))
             }
         } else {
@@ -72,6 +74,7 @@ class OlympiadRepositoryImpl @Inject constructor(
         }
     }.catch { e ->
         println("OlympiadRepositoryImpl: Exception during getOlympiads Flow: ${e.message}")
+        // В случае ошибки Flow, эмитируем пустой ответ с метаданными запроса
         emit(PaginatedResponse(emptyList(), PaginationMetadata(0, 1, page, pageSize)))
         // throw e
     }

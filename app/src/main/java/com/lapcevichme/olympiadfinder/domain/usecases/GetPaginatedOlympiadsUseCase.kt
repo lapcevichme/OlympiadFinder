@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 class GetPaginatedOlympiadsUseCase @Inject constructor(
-    @MockOlympiadRepository private val olympiadRepository: OlympiadRepository
+    private val olympiadRepository: OlympiadRepository
 ) {
     operator fun invoke(page: Int, pageSize: Int, query: String? = null, selectedGrades: List<Int> = emptyList()): Flow<PaginatedResponse<Olympiad>> {
         return olympiadRepository.getOlympiads(page, pageSize, query, selectedGrades)

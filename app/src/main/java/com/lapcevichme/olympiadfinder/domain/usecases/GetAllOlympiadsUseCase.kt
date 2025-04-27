@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 class GetAllOlympiadsUseCase @Inject constructor(
-    @MockOlympiadRepository private val olympiadRepository: OlympiadRepository
+    private val olympiadRepository: OlympiadRepository
 ) {
     operator fun invoke(): Flow<List<Olympiad>> = olympiadRepository.getAllOlympiads()
 }
