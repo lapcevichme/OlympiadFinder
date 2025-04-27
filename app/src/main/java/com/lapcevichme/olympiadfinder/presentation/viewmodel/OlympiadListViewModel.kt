@@ -11,7 +11,17 @@ import com.lapcevichme.olympiadfinder.domain.usecases.settings.GetPageSizePrefer
 import com.lapcevichme.olympiadfinder.domain.usecases.settings.animations.GetAnimateListItemsUseCase
 import com.lapcevichme.olympiadfinder.domain.usecases.settings.animations.GetAnimatePageTransitionsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 val AVAILABLE_GRADES = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
@@ -52,12 +62,20 @@ class OlympiadListViewModel @Inject constructor(
         )
 
     private val _paginationMetadata = MutableStateFlow(
-        PaginationMetadata(totalItems = 0, totalPages = 1, currentPage = 1, pageSize = pageSize.value) // Используем начальное значение pageSize
+        PaginationMetadata(
+            totalItems = 0,
+            totalPages = 1,
+            currentPage = 1,
+            pageSize = pageSize.value
+        ) // Используем начальное значение pageSize
     )
     val paginationMetadata: StateFlow<PaginationMetadata> = _paginationMetadata
 
     private val _currentPage = MutableStateFlow(1)
     val currentPage: StateFlow<Int> = _currentPage
+
+    private val _displayedPage = MutableStateFlow(1)
+    val displayedPage: StateFlow<Int> = _displayedPage
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
@@ -82,67 +100,64 @@ class OlympiadListViewModel @Inject constructor(
     init {
         println("OlympiadListViewModel: ViewModel hashcode: ${this.hashCode()}")
 
-        combine(
-            _currentPage, // Реагируем на смену страницы
-            pageSize,     // Реагируем на изменение размера страницы (из настроек)
-            _searchQuery  // Реагируем на изменение поискового запроса
-                .debounce(300) // Ждем 300ms после последнего символа перед реакцией
-                .distinctUntilChanged(), // Пропускаем повторные одинаковые запросы (после debounce)
+        val loadParamsFlow = combine(
+            _currentPage, // Реагируем на смену ЗАПРОШЕННОЙ страницы
+            pageSize,
+            _searchQuery
+                .debounce(300)
+                .distinctUntilChanged(),
             _selectedGrades
-        ) { page, size, query, selectedGrades  ->
-            // Возвращаем объединенное значение в виде Triple.
-            // Эти page, size, query будут доступны в flatMapLatest
+            // TODO: Добавить Flow выбранных предметов
+        ) { page, size, query, selectedGrades /*, selectedSubjects */ ->
             LoadParams(page, size, query, selectedGrades /*, selectedSubjects */)
         }
             .distinctUntilChanged()
 
-            .onEach { _isLoading.value = true } // Просто ставим загрузку в начале каждого запроса
+        loadParamsFlow
+            .onEach { _isLoading.value = true }
 
-            .flatMapLatest { params -> // <-- ИСПРАВЛЕНИЕ: Принимаем Data Class LoadParams
+            .flatMapLatest { params -> // Принимает Data Class LoadParams (параметры ЗАПРОШЕННОЙ страницы)
                 println("OlympiadListViewModel: Triggering load for page ${params.page}, size ${params.size}, query '${params.query}', grades ${params.selectedGrades}")
 
-                // Вызываем Use Case, передавая параметры из Data Class
-                // Use Case ожидает query: String?, но params.query: String тоже подходит
-                // Use Case ожидает selectedGrades: List<Int>, что соответствует params.selectedGrades
+                // Вызываем Use Case для получения данных олимпиад
                 getPaginatedOlympiadsUseCase(
                     page = params.page,
                     pageSize = params.size,
-                    query = params.query, // <-- Передаем query из Data Class
-                    selectedGrades = params.selectedGrades // <-- Передаем selectedGrades из Data Class
-                    // TODO: Передать selectedSubjects из Data Class
+                    query = params.query,
+                    selectedGrades = params.selectedGrades
                 )
-                    // <-- ИСПРАВЛЕНИЕ: Проносим через pipeline Use Case НЕ ТОЛЬКО ответ, НО И ОРИГИНАЛЬНЫЕ ПАРАМЕТРЫ (Data Class LoadParams)
-                    // Создаем Pair: (ответ Use Case, оригинальные параметры LoadParams)
-                    .map { response -> Pair(response, params) } // <-- Эмитируем Pair<PaginatedResponse<Olympiad>, LoadParams>
-
                     .catch { e -> // Обработка ошибок Use Case Flow
                         println("Error loading olympiads: ${e.message}")
-                        // В случае ошибки: эмитируем пустой ответ и метаданные,
-                        // ПРОНОСИМ через этот catch ОРИГИНАЛЬНЫЕ ПАРАМЕТРЫ LoadParams
-                        val emptyResponse = PaginatedResponse(emptyList<Olympiad>(), PaginationMetadata(0, 1, params.page, params.size))
-                        // <-- ИСПРАВЛЕНИЕ: Эмитируем Pair с пустым ответом и оригинальными параметрами LoadParams
-                        emit(Pair(emptyResponse, params))
-                        // Можно также перебросить исключение, если оно должно обрабатываться дальше
-                        // throw e
+                        val emptyResponse = PaginatedResponse(
+                            emptyList<Olympiad>(),
+                            PaginationMetadata(0, 1, params.page, params.size)
+                        )
+                        emit(emptyResponse) // Эмитируем пустой ответ типа PaginatedResponse<Olympiad>
                     }
+                // Use Case (с catch) теперь эмитит Flow<PaginatedResponse<Olympiad>>
             }
-            // onEach выполняется для каждого значения, успешно эмитированного из flatMapLatest (это теперь Triple!)
-            .onEach { (response, params) -> // <-- ИСПРАВЛЕНИЕ: РАЗБИРАЕМ Pair, ПОЛУЧАЕМ ответ И ОРИГИНАЛЬНЫЕ ПАРАМЕТРЫ LoadParams
-                // Обрабатываем успешный ответ или пустой ответ после catch
-                _olympiads.value = response.items // Обновляем список олимпиад
-                // Обновляем метаданные пагинации
-                // Используем метаданные из ответа (response.meta), но переписываем currentPage и pageSize
-                // на те, которые пришли в оригинальных параметрах (params.page и params.size).
-                _paginationMetadata.value = response.meta.copy(currentPage = params.page, pageSize = params.size) // <-- ИСПРАВЛЕНИЕ: Используем page и size из Data Class
+            .onEach { finalPaginatedResponse -> // Принимает PaginatedResponse<Olympiad> (с актуальными данными и метаданными)
+                // Обновляем публичные StateFlow
+                _olympiads.value =
+                    finalPaginatedResponse.items // Обновляем список олимпиад (с актуальными данными)
+                // Обновляем метаданные пагинации из ОТВЕТА
+                _paginationMetadata.value =
+                    finalPaginatedResponse.meta
+
+                // Обновляем НОМЕР ОТОБРАЖАЕМОЙ страницы ТОЛЬКО после успешной загрузки данных
+                _displayedPage.value =
+                    finalPaginatedResponse.meta.currentPage // <-- Используем номер страницы из метаданных ОТВЕТА
+
                 _isLoading.value = false // Снимаем индикатор загрузки
-                println("OlympiadListViewModel: Loaded ${response.items.size} items for page ${params.page}.")
+                println("OlympiadListViewModel: Final combined data ready. Loaded ${finalPaginatedResponse.items.size} items for page ${finalPaginatedResponse.meta.currentPage}.")
             }
-            .launchIn(viewModelScope) // Запускаем сбор всего Flow
+            .launchIn(viewModelScope)
     }
 
     fun onSearchQueryChanged(newQuery: String) {
         _searchQuery.value = newQuery // Обновляем только поисковый запрос
         _currentPage.value = 1 // Сбрасываем пагинацию, т.к. результаты поиска новые
+        _displayedPage.value = 1
         println("ViewModel: Search query changed. Filters preserved. Reset page to 1.")
     }
 
@@ -226,7 +241,8 @@ class OlympiadListViewModel @Inject constructor(
             currentSelected.remove(grade)
         }
         // Обновляем ТОЛЬКО StateFlow UI состояния
-        _filtersUiState.value = _filtersUiState.value.copy(selectedGrades = currentSelected.sorted())
+        _filtersUiState.value =
+            _filtersUiState.value.copy(selectedGrades = currentSelected.sorted())
         println("ViewModel: UI filter changed: grade $grade, selected $isSelected. Current UI selected grades: ${_filtersUiState.value.selectedGrades}")
     }
 
@@ -234,7 +250,8 @@ class OlympiadListViewModel @Inject constructor(
     fun applyFilters() {
         println("ViewModel: Apply filters button clicked. UI state: ${_filtersUiState.value}. Active state: ${_selectedGrades.value}")
         // Копируем выбранные фильтры из UI состояния в активное состояние фильтров
-        val gradesChanged = _selectedGrades.value != _filtersUiState.value.selectedGrades // Проверяем, были ли изменения по классам
+        val gradesChanged =
+            _selectedGrades.value != _filtersUiState.value.selectedGrades // Проверяем, были ли изменения по классам
         // TODO: Проверить изменения по другим фильтрам
 
         _selectedGrades.value = _filtersUiState.value.selectedGrades
@@ -268,12 +285,15 @@ class OlympiadListViewModel @Inject constructor(
         // Сбрасываем UI состояние фильтров к дефолту, чтобы при следующем открытии они были чистыми
         _filtersUiState.value = FilterUiState()
         _currentPage.value = 1
+        _displayedPage.value = 1
+
         println("ViewModel: Filters reset and applied. Active selected grades: ${_selectedGrades.value}. Active page: ${_currentPage.value}")
     }
 
 
     fun refreshData() {
         _currentPage.value = 1
+        _displayedPage.value = 1
         _searchQuery.value = ""
         _selectedGrades.value = emptyList()
 

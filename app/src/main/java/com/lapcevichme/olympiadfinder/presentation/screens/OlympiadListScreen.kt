@@ -89,6 +89,7 @@ fun OlympiadListScreen(
     val olympiads by viewModel.olympiads.collectAsState()
     val paginationMetadata by viewModel.paginationMetadata.collectAsState()
     val currentPage by viewModel.currentPage.collectAsState()
+    val displayedPage by viewModel.displayedPage.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
     // animations
@@ -193,12 +194,9 @@ fun OlympiadListScreen(
         )
     }
 
-    LaunchedEffect(currentPage, paginationMetadata.pageSize) {
-        println("OlympiadListScreen: Page or PageSize changed, scrolling to top.")
-        // Запускаем прокрутку к первому элементу при смене страницы.
-        // Это делается *после* того, как данные для новой страницы начали загружаться/появились,
-        // но до того, как пользователь может активно скроллить и вызвать конфликт состояний.
-        // scrollToItem(0) безопаснее во время переходов AnimatedContent.
+    // LaunchedEffect для сброса скролла
+    LaunchedEffect(displayedPage, paginationMetadata.pageSize) {
+        println("OlympiadListScreen: Displayed page changed to $displayedPage, scrolling to top.")
         listState.scrollToItem(index = 0)
     }
 
@@ -253,7 +251,7 @@ fun OlympiadListScreen(
             }
         } else {
             AnimatedContent(
-                targetState = currentPage,
+                targetState = displayedPage,
                 modifier = Modifier.weight(1f),
                 transitionSpec = {
                     if (animatePageTransitions) {
@@ -375,15 +373,6 @@ fun OlympiadListScreen(
                     animateTransitions = animatePageTransitions
                 )
             }
-
-            if (isLoading && olympiads.isNotEmpty()) {
-                LinearProgressIndicator(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp)
-                )
-            }
-
         }
     }
 }
