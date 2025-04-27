@@ -1,9 +1,9 @@
 package com.lapcevichme.olympiadfinder.data.network.model
 
+import com.google.gson.annotations.SerializedName
 import com.lapcevichme.olympiadfinder.domain.model.Olympiad
 import com.lapcevichme.olympiadfinder.domain.model.Stage
 import com.lapcevichme.olympiadfinder.domain.model.Subject
-import com.squareup.moshi.Json
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -11,8 +11,8 @@ data class NetworkOlympiad(
     val id: Long,
     val name: String,
     val subjects: List<NetworkSubject>?,
-    @Json(name = "min_grade") val minGrade: Int?,
-    @Json(name = "max_grade") val maxGrade: Int?,
+    @SerializedName("min_grade") val minGrade: Int?,
+    @SerializedName("max_grade") val maxGrade: Int?,
     val stages: List<NetworkStage>?,
     val link: String?,
     val description: String?,
@@ -25,8 +25,8 @@ data class NetworkSubject(
 
 data class NetworkStage(
     val name: String,
-    @Json(name = "start_date") val startDate: String?, // Или LocalDate
-    @Json(name = "end_date") val endDate: String?
+    @SerializedName("start_date") val startDate: String?, // Или LocalDate
+    @SerializedName("end_date") val endDate: String?
 )
 
 private fun NetworkOlympiad.toDomain(): Olympiad {
