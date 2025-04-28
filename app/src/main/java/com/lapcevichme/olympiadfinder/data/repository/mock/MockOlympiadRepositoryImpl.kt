@@ -33,8 +33,8 @@ class MockOlympiadRepositoryImpl @Inject constructor() : OlympiadRepository {
         )
     }
 
-    override fun getAllOlympiads(): Flow<List<Olympiad>> = flow {
-        emit(allOlympiads)
+    override fun getAllOlympiads(): Flow<Result<List<Olympiad>>> = flow {
+        emit(Result.success(allOlympiads))
     }
 
     // Функция для получения олимпиад с пагинацией
@@ -43,7 +43,7 @@ class MockOlympiadRepositoryImpl @Inject constructor() : OlympiadRepository {
         pageSize: Int,
         query: String?,
         selectedGrades: List<Int>
-    ): Flow<PaginatedResponse<Olympiad>> = flow {
+    ): Flow<Result<PaginatedResponse<Olympiad>>> = flow {
 
         // Начинаем с полного списка
         var currentFilteredList = allOlympiads
@@ -107,7 +107,7 @@ class MockOlympiadRepositoryImpl @Inject constructor() : OlympiadRepository {
 
         // kotlinx.coroutines.delay(200)
 
-        emit(response)
+        emit(Result.success(response))
     }
 
 }

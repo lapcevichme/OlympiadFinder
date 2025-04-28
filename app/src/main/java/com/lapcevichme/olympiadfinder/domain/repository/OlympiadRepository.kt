@@ -5,6 +5,6 @@ import com.lapcevichme.olympiadfinder.domain.model.PaginatedResponse
 import kotlinx.coroutines.flow.Flow
 
 interface OlympiadRepository {
-    fun getAllOlympiads(): Flow<List<Olympiad>>
-    fun getOlympiads(page: Int, pageSize: Int, query: String?, selectedGrades: List<Int>): Flow<PaginatedResponse<Olympiad>>
+    fun getAllOlympiads(): Flow<Result<List<Olympiad>>>
+    fun getOlympiads(page: Int, pageSize: Int, query: String?, selectedGrades: List<Int>): Flow<Result<PaginatedResponse<Olympiad>>>
 }

@@ -1,7 +1,6 @@
 package com.lapcevichme.olympiadfinder.presentation.screens
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.SizeTransform
@@ -69,12 +68,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.lapcevichme.olympiadfinder.domain.model.Olympiad
 import com.lapcevichme.olympiadfinder.domain.model.Stage
 import com.lapcevichme.olympiadfinder.domain.model.Subject
+import com.lapcevichme.olympiadfinder.presentation.components.ErrorDisplay
+import com.lapcevichme.olympiadfinder.presentation.viewmodel.ErrorState
 import com.lapcevichme.olympiadfinder.presentation.viewmodel.OlympiadListViewModel
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -92,6 +94,8 @@ fun OlympiadListScreen(
     val displayedPage by viewModel.displayedPage.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
+    val errorState by viewModel.errorState.collectAsState()
+
     // animations
     val animatePageTransitions by viewModel.animatePageTransitions.collectAsState()
     val animateListItems by viewModel.animateListItems.collectAsState()
@@ -103,7 +107,7 @@ fun OlympiadListScreen(
 
     val filtersUiState by viewModel.filtersUiState.collectAsState()
 
-    println("OlympiadListScreen: olympiads.size = ${olympiads.size}")
+    println("OlympiadListScreen: olympiads.pageSize = ${olympiads.size}")
     println("OlympiadListScreen: paginationMetadata = $paginationMetadata")
     println("OlympiadListScreen: currentPage = $currentPage")
     println("OlympiadListScreen: isLoading = $isLoading")
@@ -160,7 +164,10 @@ fun OlympiadListScreen(
                     availableGrades = availableGrades,
                     selectedGrades = filtersUiState.selectedGrades, // Передаем выбранные классы ИЗ СОСТОЯНИЯ UI ЛИСТА
                     onGradeSelected = { grade, isSelected ->
-                        viewModel.onGradeFilterUiChanged(grade, isSelected) // Обновляет СОСТОЯНИЕ UI ЛИСТА
+                        viewModel.onGradeFilterUiChanged(
+                            grade,
+                            isSelected
+                        ) // Обновляет СОСТОЯНИЕ UI ЛИСТА
                     },
                     // TODO: Добавить параметры для фильтров по предметам
 
@@ -242,140 +249,125 @@ fun OlympiadListScreen(
             }
         }
 
-        if (isLoading && olympiads.isEmpty()) { // Показываем индикатор только если данных нет совсем
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else {
-            AnimatedContent(
-                targetState = displayedPage,
-                modifier = Modifier.weight(1f),
-                transitionSpec = {
-                    if (animatePageTransitions) {
-                        // Определяем анимацию в зависимости от того, вперед или назад листаем
-                        if (targetState > initialState) {
-                            // Новая страница > Старой (листаем вперед)
-                            slideInHorizontally { fullWidth -> fullWidth } + fadeIn() togetherWith
-                                    slideOutHorizontally { fullWidth -> -fullWidth } + fadeOut()
+        Box(modifier = Modifier.weight(1f)) { // Box занимает оставшееся место под строкой поиска
+
+            // Отображаем контент при УСПЕХЕ (список, пустое состояние, загрузка в пустой список)
+            // Этот блок активен ТОЛЬКО если нет активной ошибки
+            if (errorState is ErrorState.NoError) {
+                // Используем AnimatedContent для анимации смены страниц, если данные загружены успешно
+                AnimatedContent(
+                    targetState = displayedPage, // <-- Используем НОМЕР ОТОБРАЖАЕМОЙ страницы
+                    modifier = Modifier.fillMaxSize(), // <-- Заполняет весь Box
+                    transitionSpec = {
+                        if (animatePageTransitions) {
+                            if (targetState > initialState) {
+                                slideInHorizontally { fullWidth -> fullWidth } + fadeIn() togetherWith slideOutHorizontally { fullWidth -> -fullWidth } + fadeOut()
+                            } else {
+                                slideInHorizontally { fullWidth -> -fullWidth } + fadeIn() togetherWith slideOutHorizontally { fullWidth -> fullWidth } + fadeOut()
+                            }.using(SizeTransform(clip = false))
                         } else {
-                            // Новая страница < Старой (листаем назад)
-                            slideInHorizontally { fullWidth -> -fullWidth } + fadeIn() togetherWith
-                                    slideOutHorizontally { fullWidth -> fullWidth } + fadeOut()
-                        }.using(
-                            // Можно добавить SizeTransform, чтобы избежать резких скачков размера, если высота списков разная
-                            SizeTransform(clip = false)
-                        )
-                    } else {
-                        EnterTransition.None togetherWith ExitTransition.None
-                    }
-                },
-                label = "OlympiadListPageAnimation" // Метка для отладки
-            ) { _ ->
-                Column {
-                    if (olympiads.isNotEmpty()) {
-                        LazyColumn(
-                            contentPadding = PaddingValues(all = 8.dp),
-                            state = listState,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            items(
-                                items = olympiads,
-                                key = { olympiad -> olympiad.id }
-                            ) { olympiad ->
+                            EnterTransition.None togetherWith ExitTransition.None
+                        }
+                    },
+                    label = "OlympiadListPageAnimation"
+                ) { _ -> // Лямбда получает НОМЕР ОТОБРАЖАЕМОЙ страницы
+                    Column { // Внутренний Column для содержимого страницы (список, пусто, загрузка)
+                        // Проверяем состояние загрузки и список ВНУТРИ AnimatedContent, когда нет ошибки
+                        when {
+                            // Индикатор загрузки при пустом списке (при первом запуске или сбросе)
+                            // Показываем его, только если список пуст Идет загрузка И нет ошибки
+                            isLoading && olympiads.isEmpty() -> { // errorState is ErrorState.NoError уже проверено выше
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .weight(1f),
+                                    contentAlignment = Alignment.Center
+                                ) { CircularProgressIndicator() }
+                            }
 
-                                val itemModifier = if (animateListItems) {
-                                    Modifier.animateItemPlacement()
-                                } else {
-                                    Modifier
-                                }
-
-                                if (animateListItems) {
-                                    // Используем AnimatedVisibility для анимации появления (FadeIn)
-                                    // Modifier.animateItemPlacement() ЗДЕСЬ БОЛЬШЕ НЕ ПРИМЕНЯЕМ
-                                    AnimatedVisibility(
-                                        visible = true, // Всегда true, т.к. мы управляем видимостью через if
-                                        enter = fadeIn(
-                                            animationSpec = tween(
-                                                durationMillis = 300,
-                                                delayMillis = 100 // Небольшая задержка для эффекта "наплыва"
-                                            )
-                                        ),
-                                        // exit можно не указывать
-                                        modifier = Modifier
-                                    ) {
+                            olympiads.isNotEmpty() -> {
+                                // Показываем LazyColumn
+                                LazyColumn(
+                                    contentPadding = PaddingValues(all = 8.dp),
+                                    state = listState,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    items(
+                                        items = olympiads,
+                                        key = { olympiad -> olympiad.id }
+                                    ) { olympiad ->
                                         OlympiadItem(
                                             olympiad = olympiad,
                                             onClick = {
-                                                selectedOlympiad = olympiad
-                                                scope.launch {
-                                                    sheetState.show()
-                                                }
+                                                selectedOlympiad =
+                                                    olympiad; scope.launch { sheetState.show() }
                                             },
-                                            animate = true,
-                                            modifier = Modifier
+                                            // onFavouriteClick = { id, isFav -> viewModel.onFavouriteToggle(id, isFav) }, // - добавлю когда сделаю сохранение избранных
+                                            animate = animateListItems,
+                                            modifier = if (animateListItems) Modifier.animateItemPlacement() else Modifier
                                         )
                                     }
-                                } else {
-                                    // Анимация выключена - просто показываем элемент
-                                    OlympiadItem(
-                                        olympiad = olympiad,
-                                        onClick = {
-                                            selectedOlympiad = olympiad
-                                            scope.launch { sheetState.show() }
-                                        },
-                                        animate = false, // Передаем false, чтобы отключить внутреннюю анимацию нажатия
-                                        modifier = itemModifier
+                                }
+                                // Индикатор загрузки внизу списка (когда грузится следующая страница)
+                                if (isLoading && olympiads.isNotEmpty()) {
+                                    LinearProgressIndicator(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 8.dp)
                                     )
                                 }
                             }
-                        }
+                            // Если список пуст И нет ошибки (и не идет загрузка в пустой список)
+                            else -> { // olympiads.isEmpty() && !isLoading // errorState is ErrorState.NoError уже проверено выше
+                                // Сообщение о пустом списке (если нет ошибки и ничего не найдено)
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .weight(1f),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val hasActiveFilters =
+                                        viewModel.selectedGrades.collectAsState().value.isNotEmpty()
+                                    val hasActiveSearch =
+                                        viewModel.searchQuery.collectAsState().value.isNotEmpty()
 
-                        // Индикатор загрузки внизу списка, когда грузится следующая страница
-                        if (isLoading && olympiads.isNotEmpty()) {
-                            LinearProgressIndicator(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 8.dp)
-                            )
-                        }
-                    } else {
-                        // Показываем сообщение, если список пуст после загрузки
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .weight(1f), // Занимает оставшееся место
-                            contentAlignment = Alignment.Center
-                        ) {
-                            val hasActiveFilters =
-                                viewModel.selectedGrades.collectAsState().value.isNotEmpty()
-                            val hasActiveSearch =
-                                viewModel.searchQuery.collectAsState().value.isNotEmpty()
-
-                            if (hasActiveSearch || hasActiveFilters /* || active subjects */) {
-                                Text("Ничего не найдено по вашему запросу или фильтрам.")
-                            } else {
-                                Text("Олимпиады не найдены.")
+                                    if (hasActiveSearch || hasActiveFilters /* || active subjects */) {
+                                        Text(
+                                            "Ничего не найдено по вашему запросу или фильтрам.",
+                                            textAlign = TextAlign.Center
+                                        )
+                                    } else {
+                                        Text("Олимпиады не найдены.", textAlign = TextAlign.Center)
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
 
-
-            if (paginationMetadata.totalPages > 1) {
-                PaginationPanel(
-                    currentPage = currentPage,
-                    totalPages = paginationMetadata.totalPages,
-                    onPageChange = { viewModel.onPageChanged(it) },
-                    animateTransitions = animatePageTransitions
+            // Отображаем компонент ErrorDisplay ТОЛЬКО если есть ошибка
+            // Этот блок активен ТОЛЬКО если errorState НЕ ErrorState.NoError
+            if (errorState !is ErrorState.NoError) {
+                ErrorDisplay( // <-- Используем универсальный компонент ErrorDisplay
+                    errorState = errorState, // Передаем текущее состояние ошибки
+                    onRetryClicked = { viewModel.onRetryClicked() }, // Передаем колбэк повтора
+                    modifier = Modifier.fillMaxSize()
                 )
             }
         }
+
+        if (paginationMetadata.totalPages > 1 && errorState is ErrorState.NoError) {
+            PaginationPanel(
+                currentPage = currentPage,
+                totalPages = paginationMetadata.totalPages,
+                onPageChange = { viewModel.onPageChanged(it) },
+                animateTransitions = animatePageTransitions
+            )
+        }
     }
 }
+
 
 @Composable
 fun OlympiadDetailsSheetContent(olympiad: Olympiad, onClose: () -> Unit) {

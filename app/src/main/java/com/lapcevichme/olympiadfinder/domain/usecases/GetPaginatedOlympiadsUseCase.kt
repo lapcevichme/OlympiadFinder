@@ -10,7 +10,7 @@ import javax.inject.Inject
 class GetPaginatedOlympiadsUseCase @Inject constructor(
     private val olympiadRepository: OlympiadRepository
 ) {
-    operator fun invoke(page: Int, pageSize: Int, query: String? = null, selectedGrades: List<Int> = emptyList()): Flow<PaginatedResponse<Olympiad>> {
+    operator fun invoke(page: Int, pageSize: Int, query: String? = null, selectedGrades: List<Int> = emptyList()): Flow<Result<PaginatedResponse<Olympiad>>> {
         return olympiadRepository.getOlympiads(page, pageSize, query, selectedGrades)
     }
 }

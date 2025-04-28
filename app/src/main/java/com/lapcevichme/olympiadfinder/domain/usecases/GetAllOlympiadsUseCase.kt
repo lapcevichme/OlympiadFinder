@@ -9,5 +9,5 @@ import javax.inject.Inject
 class GetAllOlympiadsUseCase @Inject constructor(
     private val olympiadRepository: OlympiadRepository
 ) {
-    operator fun invoke(): Flow<List<Olympiad>> = olympiadRepository.getAllOlympiads()
+    operator fun invoke(): Flow<Result<List<Olympiad>>> = olympiadRepository.getAllOlympiads()
 }

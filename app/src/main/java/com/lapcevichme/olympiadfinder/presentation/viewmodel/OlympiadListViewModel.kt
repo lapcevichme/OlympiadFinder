@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lapcevichme.olympiadfinder.data.local.DEFAULT_PAGE_SIZE
 import com.lapcevichme.olympiadfinder.domain.model.Olympiad
-import com.lapcevichme.olympiadfinder.domain.model.PaginatedResponse
 import com.lapcevichme.olympiadfinder.domain.model.PaginationMetadata
 import com.lapcevichme.olympiadfinder.domain.usecases.GetPaginatedOlympiadsUseCase
 import com.lapcevichme.olympiadfinder.domain.usecases.settings.GetPageSizePreferenceUseCase
@@ -14,15 +13,16 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import retrofit2.HttpException
+import java.io.IOException
 import javax.inject.Inject
 
 val AVAILABLE_GRADES = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
@@ -78,7 +78,7 @@ class OlympiadListViewModel @Inject constructor(
     private val _displayedPage = MutableStateFlow(1)
     val displayedPage: StateFlow<Int> = _displayedPage
 
-    private val _isLoading = MutableStateFlow(false)
+    private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading
 
     // StateFlow для текущего поискового запроса
@@ -98,73 +98,54 @@ class OlympiadListViewModel @Inject constructor(
     // private val _selectedSubjects = MutableStateFlow<List<Subject>>(emptyList())
     // val selectedSubjects: StateFlow<List<Subject>> = _selectedSubjects
 
+    private val _errorState =
+        MutableStateFlow<ErrorState>(ErrorState.NoError) // Начальное состояние: нет ошибки
+    val errorState: StateFlow<ErrorState> = _errorState
+
+    // Храним последние параметры загрузки для повтора
+    private var lastLoadParams: LoadParams? = null
+
     init {
         println("OlympiadListViewModel: ViewModel hashcode: ${this.hashCode()}")
 
-        // Фикс бага с номером страницы при изменении ее размера в настройках
+        // Наблюдаем за изменением pageSize и сбрасываем страницу на 1
         pageSize
-            .drop(1) // Пропускаем первое значение при создании ViewModel. Реагируем только на ИЗМЕНЕНИЯ.
+            .drop(1)
             .onEach { newSize ->
                 println("ViewModel: Page size changed to $newSize. Resetting page to 1.")
-                // Сбрасываем ЗАПРОШЕННУЮ страницу на 1
                 _currentPage.value = 1
-                // combine Flow, который наблюдает за _currentPage, увидит это изменение и инициирует новую загрузку с новым pageSize и страницей 1.
             }
             .launchIn(viewModelScope)
 
+
+        // Combine Flow объединяет параметры, которые ИНИЦИИРУЮТ ЗАГРУЗКУ
         val loadParamsFlow = combine(
-            _currentPage, // Реагируем на смену ЗАПРОШЕННОЙ страницы
+            _currentPage,
             pageSize,
             _searchQuery
                 .debounce(300)
                 .distinctUntilChanged(),
             _selectedGrades
             // TODO: Добавить Flow выбранных предметов
-        ) { page, size, query, selectedGrades /*, selectedSubjects */ ->
-            LoadParams(page, size, query, selectedGrades /*, selectedSubjects */)
+        ) { page, size, query, selectedGrades ->
+            LoadParams(page, size, query, selectedGrades)
         }
             .distinctUntilChanged()
 
+        // Наблюдаем за loadParamsFlow и вызываем loadData с новыми параметрами
         loadParamsFlow
-            .onEach { _isLoading.value = true }
+            .onEach { params -> println("ViewModel: loadParamsFlow emitted: $params") }
 
-            .flatMapLatest { params -> // Принимает Data Class LoadParams (параметры ЗАПРОШЕННОЙ страницы)
-                println("OlympiadListViewModel: Triggering load for page ${params.page}, size ${params.size}, query '${params.query}', grades ${params.selectedGrades}")
-
-                // Вызываем Use Case для получения данных олимпиад
-                getPaginatedOlympiadsUseCase(
-                    page = params.page,
-                    pageSize = params.size,
-                    query = params.query,
-                    selectedGrades = params.selectedGrades
-                )
-                    .catch { e -> // Обработка ошибок Use Case Flow
-                        println("Error loading olympiads: ${e.message}")
-                        val emptyResponse = PaginatedResponse(
-                            emptyList<Olympiad>(),
-                            PaginationMetadata(0, 1, params.page, params.size)
-                        )
-                        emit(emptyResponse) // Эмитируем пустой ответ типа PaginatedResponse<Olympiad>
-                    }
-                // Use Case (с catch) теперь эмитит Flow<PaginatedResponse<Olympiad>>
+            .onEach { params ->
+                lastLoadParams = params // Сохраняем параметры перед вызовом loadData
             }
-            .onEach { finalPaginatedResponse -> // Принимает PaginatedResponse<Olympiad> (с актуальными данными и метаданными)
-                // Обновляем публичные StateFlow
-                _olympiads.value =
-                    finalPaginatedResponse.items // Обновляем список олимпиад (с актуальными данными)
-                // Обновляем метаданные пагинации из ОТВЕТА
-                _paginationMetadata.value =
-                    finalPaginatedResponse.meta
-
-                // Обновляем НОМЕР ОТОБРАЖАЕМОЙ страницы ТОЛЬКО после успешной загрузки данных
-                _displayedPage.value =
-                    finalPaginatedResponse.meta.currentPage // <-- Используем номер страницы из метаданных ОТВЕТА
-
-                _isLoading.value = false // Снимаем индикатор загрузки
-                println("OlympiadListViewModel: Final combined data ready. Loaded ${finalPaginatedResponse.items.size} items for page ${finalPaginatedResponse.meta.currentPage}.")
-            }
+            .onEach { params -> println("ViewModel: Calling loadData with params: $params") }
+            .onEach { params -> loadData(params) } // Вызываем loadData()
             .launchIn(viewModelScope)
+
+
     }
+
 
     fun onSearchQueryChanged(newQuery: String) {
         _searchQuery.value = newQuery // Обновляем только поисковый запрос
@@ -176,12 +157,12 @@ class OlympiadListViewModel @Inject constructor(
 
     /*
     // Изменили loadOlympiads, чтобы принимал размер страницы
-    private fun loadOlympiads(page: Int = _currentPage.value, size: Int = pageSize.value) {
-        println("OlympiadListViewModel: Loading olympiads for page $page with size $size")
+    private fun loadOlympiads(page: Int = _currentPage.value, pageSize: Int = pageSize.value) {
+        println("OlympiadListViewModel: Loading olympiads for page $page with pageSize $pageSize")
         viewModelScope.launch {
             _isLoading.value = true
             // Используем переданный или текущий размер страницы
-            getPaginatedOlympiadsUseCase(page, size)
+            getPaginatedOlympiadsUseCase(page, pageSize)
                 .catch { e -> // Добавим обработку ошибок
                     println("Error loading olympiads: ${e.message}")
                     _isLoading.value = false
@@ -190,10 +171,10 @@ class OlympiadListViewModel @Inject constructor(
                 .collectLatest { response ->
                     _olympiads.value = response.items
                     // Обновляем метаданные, включая pageSize из ответа (если API его возвращает)
-                    // или используем текущий запрошенный 'size'
-                    _paginationMetadata.value = response.meta.copy(pageSize = size) // Важно обновить pageSize в метаданных
+                    // или используем текущий запрошенный 'pageSize'
+                    _paginationMetadata.value = response.meta.copy(pageSize = pageSize) // Важно обновить pageSize в метаданных
                     _isLoading.value = false
-                    println("OlympiadListViewModel: Loaded ${response.items.size} items.")
+                    println("OlympiadListViewModel: Loaded ${response.items.pageSize} items.")
                 }
         }
     }
@@ -232,7 +213,7 @@ class OlympiadListViewModel @Inject constructor(
     }
 
 
-    // НОВОЕ: Функция для ИНИЦИАЛИЗАЦИИ состояния UI фильтров при открытии листа
+    // Функция для ИНИЦИАЛИЗАЦИИ состояния UI фильтров при открытии листа
     fun openFilterSheet() {
         // Копируем текущие активные фильтры в состояние UI
         _filtersUiState.value = FilterUiState(
@@ -242,7 +223,7 @@ class OlympiadListViewModel @Inject constructor(
         println("ViewModel: Filter sheet opened, UI state initialized with active filters: ${_filtersUiState.value}")
     }
 
-    // НОВОЕ: Функция для ИЗМЕНЕНИЯ состояния фильтров ТОЛЬКО В UI листа
+    // Функция для ИЗМЕНЕНИЯ состояния фильтров ТОЛЬКО В UI листа
     fun onGradeFilterUiChanged(grade: Int, isSelected: Boolean) {
         val currentSelected = _filtersUiState.value.selectedGrades.toMutableList()
         if (isSelected) {
@@ -311,5 +292,83 @@ class OlympiadListViewModel @Inject constructor(
         _filtersUiState.value = FilterUiState()
         println("ViewModel: Refresh data, reset active filters and UI state.")
         // TODO: Сбрасывать выбранные предметы
+    }
+
+    fun onRetryClicked() {
+        println("ViewModel: Retry button clicked. Attempting to reload last requested data.")
+        // Используем последние сохраненные параметры для повторного вызова loadData
+        lastLoadParams?.let { params ->
+            loadData(params) // Перезапускаем Flow загрузки
+        }
+        // Если lastLoadParams == null (что маловероятно, если ошибка произошла после первой загрузки),
+        // можно рассмотреть вызов refreshData() или loadData(LoadParams(1, pageSize.value, ...))
+    }
+
+    private fun loadData(params: LoadParams) {
+        viewModelScope.launch {
+            println("ViewModel: Inside loadData for page ${params.page}, query '${params.query}', grades ${params.selectedGrades}")
+
+            _isLoading.value = true // Ставим true в начале загрузки
+            _errorState.value = ErrorState.NoError // Сбрасываем предыдущую ошибку
+
+
+            // Use Case, который возвращает Flow<Result<...>>
+            getPaginatedOlympiadsUseCase(
+                page = params.page,
+                pageSize = params.pageSize,
+                query = params.query,
+                selectedGrades = params.selectedGrades
+            )
+
+                // Обрабатываем РЕЗУЛЬТАТ (успех или ошибка) в блоке onEach
+                // Блок catch здесь НЕ НУЖЕН, потому что ошибки представлены как Result.failure
+                .onEach { result -> // result типа Result<PaginatedResponse<Olympiad>>
+                    println("ViewModel: loadData received result.")
+
+                    _isLoading.value =
+                        false // Снимаем индикатор загрузки (независимо от успеха/ошибки)
+
+                    result.fold( // Используем fold для обработки Result
+                        onSuccess = { finalPaginatedResponse -> // finalPaginatedResponse - это PaginatedResponse<Olympiad> из Result.success
+                            println("ViewModel: loadData success. Processing response for page ${finalPaginatedResponse.meta.currentPage}.")
+
+                            // Обновляем UI состояние при успехе
+                            _olympiads.value = finalPaginatedResponse.items
+                            _paginationMetadata.value = finalPaginatedResponse.meta
+                            _displayedPage.value =
+                                finalPaginatedResponse.meta.currentPage // Обновляем отображаемую страницу
+
+                            _errorState.value =
+                                ErrorState.NoError // Очищаем состояние ошибки при успешной загрузке
+
+                            println("ViewModel: loadData success. Loaded ${finalPaginatedResponse.items.size} items for page ${finalPaginatedResponse.meta.currentPage}.")
+                        },
+                        onFailure = { e -> // e - это Throwable из Result.failure
+                            println("ViewModel: loadData failure. Exception: ${e.message}")
+                            println("ViewModel: Caught exception type: ${e::class.java.name}") // ЛОГ ТИПА ИСКЛЮЧЕНИЯ
+
+                            // Обновляем UI состояние при ошибке
+                            _olympiads.value = emptyList() // Очищаем список
+                            _paginationMetadata.value = PaginationMetadata(
+                                totalItems = 0,
+                                totalPages = 1,
+                                currentPage = params.page,
+                                pageSize = params.pageSize
+                            ) // Сбрасываем метаданные
+
+                            // Устанавливаем состояние ошибки в зависимости от типа исключения
+                            _errorState.value = when (e) {
+                                is IOException -> ErrorState.NetworkError // Ошибки ввода-вывода (сеть)
+                                is HttpException -> ErrorState.ServerError(e.message()) // Ошибки HTTP (сервер)
+                                is IllegalStateException -> ErrorState.ServerError(e.message) // Ошибка данных из репозитория
+                                else -> ErrorState.ServerError(
+                                    e.message ?: "Неизвестная ошибка загрузки"
+                                ) // Остальные ошибки
+                            }
+                        }
+                    )
+                }
+                .launchIn(viewModelScope)
+        }
     }
 }
