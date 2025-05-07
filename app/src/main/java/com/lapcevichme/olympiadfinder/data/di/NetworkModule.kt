@@ -1,19 +1,23 @@
 package com.lapcevichme.olympiadfinder.data.di
 
+import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.lapcevichme.olympiadfinder.BuildConfig
 import com.lapcevichme.olympiadfinder.data.network.OlympiadApiService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import javax.inject.Singleton
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import com.lapcevichme.olympiadfinder.BuildConfig
+import okhttp3.Cache
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.logging.HttpLoggingInterceptor.Level
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import java.io.File
+import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -29,7 +33,25 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
+    fun provideCacheDir(@ApplicationContext context: Context): File {
+        // Создаем поддиректорию "okhttp_cache" внутри стандартной директории кэша приложения
+        val cacheDir = File(context.cacheDir, "okhttp_cache")
+        cacheDir.mkdirs()
+        return cacheDir
+    }
+
+    @Provides
+    @Singleton
+    // Принимаем директорию кэша, которую предоставила предыдущая функция
+    fun provideCache(cacheDir: File): Cache {
+        // Определяем максимальный размер кэша 10 MiB
+        val cacheSize = 10 * 1024 * 1024L
+        return Cache(cacheDir, cacheSize)
+    }
+
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(cache: Cache): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
             level = if (BuildConfig.DEBUG) Level.BASIC else Level.NONE
         }
@@ -37,6 +59,7 @@ object NetworkModule {
         return OkHttpClient.Builder()
             .addInterceptor(logging)
             // TODO: Другие интерцепторы (например, для аутентификации, кэширования) здесь же
+            .cache(cache)
             .build()
     }
 
@@ -45,11 +68,11 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideRetrofit(gson: Gson): Retrofit {
+    fun provideRetrofit(gson: Gson, okHttpClient: OkHttpClient): Retrofit {
         return Retrofit.Builder()
             .baseUrl(BuildConfig.BASE_URL)
             .addConverterFactory(GsonConverterFactory.create(gson))
-            .client(provideOkHttpClient())
+            .client(okHttpClient)
             .build()
     }
 
