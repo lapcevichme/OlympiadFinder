@@ -11,10 +11,13 @@ import javax.inject.Singleton
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import com.lapcevichme.olympiadfinder.BuildConfig
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
+import okhttp3.logging.HttpLoggingInterceptor.Level
 
 @Module
 @InstallIn(SingletonComponent::class)
-object  NetworkModule {
+object NetworkModule {
 
     @Provides
     @Singleton
@@ -22,6 +25,19 @@ object  NetworkModule {
         return GsonBuilder()
             .setDateFormat("yyyy-MM-dd")
             .create()
+    }
+
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(): OkHttpClient {
+        val logging = HttpLoggingInterceptor().apply {
+            level = if (BuildConfig.DEBUG) Level.BASIC else Level.NONE
+        }
+
+        return OkHttpClient.Builder()
+            .addInterceptor(logging)
+            // TODO: Другие интерцепторы (например, для аутентификации, кэширования) здесь же
+            .build()
     }
 
     // emulator : http://10.0.2.2:8080
@@ -33,6 +49,7 @@ object  NetworkModule {
         return Retrofit.Builder()
             .baseUrl(BuildConfig.BASE_URL)
             .addConverterFactory(GsonConverterFactory.create(gson))
+            .client(provideOkHttpClient())
             .build()
     }
 
