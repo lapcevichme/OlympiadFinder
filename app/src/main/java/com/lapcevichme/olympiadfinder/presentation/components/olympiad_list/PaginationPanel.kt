@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,7 +26,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.lapcevichme.olympiadfinder.ui.theme.PreviewTheme
 
 @Composable
 fun PaginationPanel(
@@ -34,13 +37,14 @@ fun PaginationPanel(
     onPageChange: (Int) -> Unit,
     animateTransitions: Boolean
 ) {
-    if (totalPages <= 1) {
-        return
-    }
+//    if (totalPages <= 1) {
+//        return
+//    }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
             .padding(horizontal = 8.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
@@ -51,7 +55,8 @@ fun PaginationPanel(
         ) {
             Icon(
                 Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Предыдущая страница"
+                contentDescription = "Предыдущая страница",
+                tint = MaterialTheme.colorScheme.onSurface
             )
         }
         Spacer(modifier = Modifier.width(16.dp))
@@ -73,8 +78,9 @@ fun PaginationPanel(
             label = "PageNumberAnimation"
         ) { targetPage ->
             Text(
-                text = "$targetPage / $totalPages", // Используем targetPage
-                style = MaterialTheme.typography.bodyMedium
+                text = "$targetPage / $totalPages",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
 
@@ -85,8 +91,85 @@ fun PaginationPanel(
         ) {
             Icon(
                 Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = "Следующая страница"
+                contentDescription = "Следующая страница",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
+
+/*
+    ---- PREVIEWS ----
+ */
+
+@Preview(showBackground = true, name = "Light Theme")
+@Preview(
+    showBackground = true,
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES,
+    name = "Dark Theme"
+)
+@Composable
+fun PreviewPaginationPanel_MiddlePage() {
+    PreviewTheme {
+        PaginationPanel(
+            currentPage = 5,
+            totalPages = 10,
+            onPageChange = {},
+            animateTransitions = true
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Light Theme")
+@Preview(
+    showBackground = true,
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES,
+    name = "Dark Theme"
+)
+@Composable
+fun PreviewPaginationPanel_FirstPage() {
+    PreviewTheme {
+        PaginationPanel(
+            currentPage = 1,
+            totalPages = 10,
+            onPageChange = {},
+            animateTransitions = true
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Light Theme")
+@Preview(
+    showBackground = true,
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES,
+    name = "Dark Theme"
+)
+@Composable
+fun PreviewPaginationPanel_LastPage() {
+    PreviewTheme {
+        PaginationPanel(
+            currentPage = 10,
+            totalPages = 10,
+            onPageChange = {},
+            animateTransitions = true
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Light Theme")
+@Preview(
+    showBackground = true,
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES,
+    name = "Dark Theme"
+)
+@Composable
+fun PreviewPaginationPanel_SinglePage() {
+    PreviewTheme {
+        PaginationPanel(
+            currentPage = 1,
+            totalPages = 1,
+            onPageChange = {},
+            animateTransitions = true
+        )
     }
 }

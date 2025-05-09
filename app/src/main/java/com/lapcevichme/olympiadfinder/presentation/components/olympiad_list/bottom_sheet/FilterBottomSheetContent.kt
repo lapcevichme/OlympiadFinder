@@ -1,5 +1,6 @@
 package com.lapcevichme.olympiadfinder.presentation.components.olympiad_list.bottom_sheet
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -16,7 +17,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.lapcevichme.olympiadfinder.ui.theme.PreviewTheme
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -31,14 +34,25 @@ fun FilterBottomSheetContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
             .padding(16.dp)
     ) {
-        Text("Фильтры", style = MaterialTheme.typography.headlineSmall)
+        Text(
+            "Фильтры",
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface
+        )
         Spacer(modifier = Modifier.height(16.dp))
 
         // Раздел "Класс участия"
-        Text("Класс участия", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Класс участия",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
         Spacer(modifier = Modifier.height(8.dp))
+
         FlowRow( // Используем FlowRow для автоматического переноса элементов
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp), // Горизонтальные отступы
@@ -53,7 +67,12 @@ fun FilterBottomSheetContent(
                             grade !in selectedGrades
                         ) // Переключаем состояние выбора
                     },
-                    label = { Text(grade.toString()) }
+                    label = {
+                        Text(
+                            grade.toString(),
+                            color = if (grade in selectedGrades) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 )
             }
         }
@@ -71,16 +90,58 @@ fun FilterBottomSheetContent(
                 onClick = onResetFilters, // Вызываем функцию сброса UI состояния
                 modifier = Modifier.weight(1f) // Растягиваем кнопку
             ) {
-                Text("Сбросить")
+                Text("Сбросить", color = MaterialTheme.colorScheme.onSurface)
             }
             Button(
                 onClick = onApplyFilters, // Вызываем функцию применения фильтров (она также закроет лист)
                 modifier = Modifier.weight(1f) // Растягиваем кнопку
             ) {
-                Text("Применить")
+                Text("Применить", color = MaterialTheme.colorScheme.onPrimary)
             }
         }
         Spacer(modifier = Modifier.height(16.dp)) // Отступ снизу
 
+    }
+}
+
+/*
+    ---- PREVIEWS ----
+ */
+
+@Preview(showBackground = true, name = "Light Theme")
+@Preview(
+    showBackground = true,
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES,
+    name = "Dark Theme"
+)
+@Composable
+fun PreviewFilterBottomSheetContent_Default() {
+    PreviewTheme {
+        FilterBottomSheetContent(
+            availableGrades = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
+            selectedGrades = listOf(5, 7, 9),
+            onGradeSelected = { _, _ -> },
+            onApplyFilters = {},
+            onResetFilters = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Light Theme")
+@Preview(
+    showBackground = true,
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES,
+    name = "Dark Theme"
+)
+@Composable
+fun PreviewFilterBottomSheetContent_NoGradesSelected() {
+    PreviewTheme { // Оберни в тему
+        FilterBottomSheetContent(
+            availableGrades = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
+            selectedGrades = emptyList(),
+            onGradeSelected = { _, _ -> },
+            onApplyFilters = {},
+            onResetFilters = {}
+        )
     }
 }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.lapcevichme.olympiadfinder.domain.model.Olympiad
 import com.lapcevichme.olympiadfinder.domain.model.Stage
 import com.lapcevichme.olympiadfinder.domain.model.Subject
+import com.lapcevichme.olympiadfinder.ui.theme.PreviewTheme
 import java.time.LocalDate
 
 @Composable
@@ -58,7 +60,10 @@ fun OlympiadItem(
                 }
             ),
         interactionSource = interactionSource,
-        shape = MaterialTheme.shapes.medium
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
         // elevation = CardDefaults.cardElevation(...) // Можно добавить elevation
     ) {
         Column(
@@ -66,14 +71,23 @@ fun OlympiadItem(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            Text(text = olympiad.name, style = MaterialTheme.typography.headlineSmall)
+            Text(
+                text = olympiad.name,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
 
             olympiad.subjects?.takeIf { it.isNotEmpty() }?.let { subjects ->
                 Text(
                     text = "Предметы: ${subjects.joinToString { it.name }}",
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            } ?: Text(text = "Предметы: -", style = MaterialTheme.typography.bodyMedium)
+            } ?: Text(
+                text = "Предметы: -",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
             val gradeRange = when {
                 olympiad.minGrade != null && olympiad.maxGrade != null -> "Классы: ${olympiad.minGrade} - ${olympiad.maxGrade}"
@@ -81,31 +95,55 @@ fun OlympiadItem(
                 olympiad.maxGrade != null -> "Класс: до ${olympiad.maxGrade}"
                 else -> "Классы: -"
             }
-            Text(text = gradeRange, style = MaterialTheme.typography.bodyMedium)
+
+            Text(
+                text = gradeRange,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
             olympiad.stages?.takeIf { it.isNotEmpty() }?.let { stages ->
                 Text(
                     text = "Этапы: ${stages.joinToString { it.name }}",
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            } ?: Text(text = "Этапы: -", style = MaterialTheme.typography.bodySmall)
+            } ?: Text(
+                text = "Этапы: -",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
             olympiad.description?.takeIf { it.isNotBlank() }?.let { description ->
-                Text(text = description, style = MaterialTheme.typography.bodySmall)
-            } ?: Text(text = "Описание отсутствует", style = MaterialTheme.typography.bodySmall)
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } ?: Text(
+                text = "Описание отсутствует",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
+
 
 /*
     ---- PREVIEWS ----
     (made by gemini <3)
  */
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "Light Theme")
+@Preview(
+    showBackground = true,
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES,
+    name = "Dark Theme"
+)
 @Composable
 fun OlympiadItemPreview() {
-    MaterialTheme {
+    PreviewTheme {
         OlympiadItem(
             olympiad = Olympiad(
                 id = 1L,
@@ -127,10 +165,15 @@ fun OlympiadItemPreview() {
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "Light Theme")
+@Preview(
+    showBackground = true,
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES,
+    name = "Dark Theme"
+)
 @Composable
 fun OlympiadItemShortPreview() {
-    MaterialTheme {
+    PreviewTheme {
         OlympiadItem(
             olympiad = Olympiad(
                 id = 2L,
@@ -151,10 +194,15 @@ fun OlympiadItemShortPreview() {
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "Light Theme")
+@Preview(
+    showBackground = true,
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES,
+    name = "Dark Theme"
+)
 @Composable
 fun OlympiadItemNoGradesPreview() {
-    MaterialTheme {
+    PreviewTheme {
         OlympiadItem(
             olympiad = Olympiad(
                 id = 3L,
@@ -175,10 +223,15 @@ fun OlympiadItemNoGradesPreview() {
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "Light Theme")
+@Preview(
+    showBackground = true,
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES,
+    name = "Dark Theme"
+)
 @Composable
 fun OlympiadItemNullableDataPreview() {
-    MaterialTheme {
+    PreviewTheme {
         OlympiadItem(
             olympiad = Olympiad(
                 id = 3L,
@@ -197,10 +250,15 @@ fun OlympiadItemNullableDataPreview() {
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "Light Theme")
+@Preview(
+    showBackground = true,
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES,
+    name = "Dark Theme"
+)
 @Composable
 fun OlympiadItemEmptyListsPreview() {
-    MaterialTheme {
+    PreviewTheme {
         OlympiadItem(
             olympiad = Olympiad(
                 id = 4L,
