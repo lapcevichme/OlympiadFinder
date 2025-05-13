@@ -1,5 +1,6 @@
 package com.lapcevichme.olympiadfinder.presentation.screens
 
+import android.content.res.Configuration
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -10,6 +11,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -20,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -30,8 +33,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -48,19 +53,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.lapcevichme.olympiadfinder.domain.model.Olympiad
+import com.lapcevichme.olympiadfinder.domain.model.PaginationMetadata
+import com.lapcevichme.olympiadfinder.domain.model.Stage
+import com.lapcevichme.olympiadfinder.domain.model.Subject
 import com.lapcevichme.olympiadfinder.presentation.components.ErrorDisplay
-import com.lapcevichme.olympiadfinder.presentation.components.olympiad_list.bottom_sheet.FilterBottomSheetContent
-import com.lapcevichme.olympiadfinder.presentation.components.olympiad_list.bottom_sheet.OlympiadDetailsSheetContent
 import com.lapcevichme.olympiadfinder.presentation.components.olympiad_list.OlympiadItem
 import com.lapcevichme.olympiadfinder.presentation.components.olympiad_list.PaginationPanel
+import com.lapcevichme.olympiadfinder.presentation.components.olympiad_list.bottom_sheet.FilterBottomSheetContent
+import com.lapcevichme.olympiadfinder.presentation.components.olympiad_list.bottom_sheet.OlympiadDetailsSheetContent
 import com.lapcevichme.olympiadfinder.presentation.viewmodel.ErrorState
+import com.lapcevichme.olympiadfinder.presentation.viewmodel.FilterUiState
 import com.lapcevichme.olympiadfinder.presentation.viewmodel.OlympiadListViewModel
+import com.lapcevichme.olympiadfinder.ui.theme.PreviewTheme
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OlympiadListScreen(
     viewModel: OlympiadListViewModel = hiltViewModel()
@@ -72,7 +85,6 @@ fun OlympiadListScreen(
     val currentPage by viewModel.currentPage.collectAsState()
     val displayedPage by viewModel.displayedPage.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
-
     val errorState by viewModel.errorState.collectAsState()
 
     // animations
@@ -107,7 +119,50 @@ fun OlympiadListScreen(
         LazyListState()
     }
 
-    // Показываем BottomSheet только если олимпиада выбрана
+    // LaunchedEffect для сброса скролла при смене отображаемой страницы
+    LaunchedEffect(displayedPage, paginationMetadata.pageSize) {
+        println("OlympiadListScreen: Displayed page changed to $displayedPage, scrolling to top.")
+        // Проверяем, что список не пуст, прежде чем пытаться скроллить
+        if (listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0) {
+            listState.scrollToItem(index = 0)
+        }
+    }
+
+    // Основной контент экрана вынесен в отдельную Composable
+    OlympiadListScreenContent(
+        olympiads = olympiads,
+        paginationMetadata = paginationMetadata,
+        currentPage = currentPage,
+        totalPages = paginationMetadata.totalPages,
+        isLoading = isLoading,
+        errorState = errorState,
+        searchQuery = searchQuery,
+        filterUiState = filtersUiState,
+        availableGrades = availableGrades,
+        animatePageTransitions = animatePageTransitions,
+        animateListItems = animateListItems,
+        listState = listState,
+        onSearchQueryChanged = { viewModel.onSearchQueryChanged(it) },
+        onFilterIconClick = { showFilterSheet = true },
+        onPageChanged = { viewModel.onPageChanged(it) },
+        onOlympiadClick = { olympiad ->
+            selectedOlympiad = olympiad
+            scope.launch { sheetState.show() }
+        },
+        onRetryClicked = { viewModel.onRetryClicked() },
+        onGradeFilterUiChanged = { grade, isSelected ->
+            viewModel.onGradeFilterUiChanged(
+                grade,
+                isSelected
+            )
+        },
+        applyFilters = { viewModel.applyFilters() },
+        discardFilterChanges = { viewModel.discardFilterChanges() },
+        resetAndApplyFilters = { viewModel.resetAndApplyFilters() }
+    )
+
+
+    // BottomSheet для деталей олимпиады
     if (selectedOlympiad != null) {
         ModalBottomSheet(
             sheetState = sheetState,
@@ -179,36 +234,75 @@ fun OlympiadListScreen(
             }
         )
     }
-
-    // LaunchedEffect для сброса скролла
-    LaunchedEffect(displayedPage, paginationMetadata.pageSize) {
-        println("OlympiadListScreen: Displayed page changed to $displayedPage, scrolling to top.")
-        listState.scrollToItem(index = 0)
-    }
+}
 
 
-    // Основной контент экрана
+// Stateless Composable для UI контента OlympiadListScreen
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun OlympiadListScreenContent(
+    olympiads: List<Olympiad>,
+    paginationMetadata: PaginationMetadata,
+    currentPage: Int,
+    totalPages: Int,
+    isLoading: Boolean,
+    errorState: ErrorState,
+    searchQuery: String,
+    filterUiState: FilterUiState, // Передаем UI состояние фильтров для отображения
+    availableGrades: List<Int>, // Передаем доступные классы для фильтров
+    animatePageTransitions: Boolean,
+    animateListItems: Boolean,
+    listState: LazyListState, // Принимаем состояние списка
+    onSearchQueryChanged: (String) -> Unit,
+    onFilterIconClick: () -> Unit,
+    onPageChanged: (Int) -> Unit,
+    onOlympiadClick: (Olympiad) -> Unit,
+    onRetryClicked: () -> Unit,
+    // Колбэки для фильтров (передаем их из ViewModel через основной Composable)
+    onGradeFilterUiChanged: (grade: Int, isSelected: Boolean) -> Unit,
+    applyFilters: () -> Unit,
+    discardFilterChanges: () -> Unit,
+    resetAndApplyFilters: () -> Unit
+) {
     Column(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background) // Устанавливаем фон экрана из темы
     ) {
         // Search Bar Row
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surface)
                 .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Поле ввода поискового запроса
             OutlinedTextField(
                 value = searchQuery,
-                onValueChange = { viewModel.onSearchQueryChanged(it) },
-                label = { Text("Поиск олимпиад...") },
+                onValueChange = onSearchQueryChanged, // Используем переданный колбэк
+                label = {
+                    Text(
+                        "Поиск олимпиад...",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }, // Цвет метки
                 singleLine = true,
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Иконка поиска") },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = "Иконка поиска",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }, // Цвет иконки
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.onSearchQueryChanged("") }) {
-                            Icon(Icons.Default.Close, contentDescription = "Очистить поиск")
+                        IconButton(onClick = { onSearchQueryChanged("") }) { // Используем переданный колбэк
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Очистить поиск",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            ) // Цвет иконки
                         }
                     }
                 },
@@ -216,15 +310,25 @@ fun OlympiadListScreen(
                     imeAction = ImeAction.Search,
                     capitalization = KeyboardCapitalization.Words
                 ),
-                modifier =
-                    Modifier.weight(1f) // Занимает все доступное место, кроме кнопки фильтров
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    cursorColor = MaterialTheme.colorScheme.primary,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+                modifier = Modifier.weight(1f)
             )
 
             // Кнопка фильтров
-            IconButton(onClick = {
-                showFilterSheet = true
-            }) { // Показываем BottomSheet с фильтрами при клике
-                Icon(Icons.Default.Menu, contentDescription = "Фильтры")
+            IconButton(onClick = onFilterIconClick) { // Используем переданный колбэк
+                Icon(
+                    Icons.Default.Menu,
+                    contentDescription = "Фильтры",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
             }
         }
 
@@ -235,7 +339,7 @@ fun OlympiadListScreen(
             if (errorState is ErrorState.NoError) {
                 // Используем AnimatedContent для анимации смены страниц, если данные загружены успешно
                 AnimatedContent(
-                    targetState = displayedPage, // <-- Используем НОМЕР ОТОБРАЖАЕМОЙ страницы
+                    targetState = currentPage, // <-- Анимируем по НОМЕРУ ТЕКУЩЕЙ страницы
                     modifier = Modifier.fillMaxSize(),
                     transitionSpec = {
                         if (animatePageTransitions) {
@@ -249,7 +353,7 @@ fun OlympiadListScreen(
                         }
                     },
                     label = "OlympiadListPageAnimation"
-                ) { _ -> // Лямбда получает НОМЕР ОТОБРАЖАЕМОЙ страницы
+                ) { _ -> // Лямбда получает НОМЕР ТЕКУЩЕЙ страницы
                     Column { // Внутренний Column для содержимого страницы (список, пусто, загрузка)
                         // Проверяем состояние загрузки и список ВНУТРИ AnimatedContent, когда нет ошибки
                         when {
@@ -261,13 +365,13 @@ fun OlympiadListScreen(
                                         .fillMaxSize()
                                         .weight(1f),
                                     contentAlignment = Alignment.Center
-                                ) { CircularProgressIndicator() }
+                                ) { CircularProgressIndicator(color = MaterialTheme.colorScheme.primary) } // Цвет индикатора
                             }
 
                             olympiads.isNotEmpty() -> {
                                 LazyColumn(
                                     contentPadding = PaddingValues(all = 8.dp),
-                                    state = listState,
+                                    state = listState, // Используем переданное состояние списка
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     items(
@@ -276,10 +380,7 @@ fun OlympiadListScreen(
                                     ) { olympiad ->
                                         OlympiadItem(
                                             olympiad = olympiad,
-                                            onClick = {
-                                                selectedOlympiad =
-                                                    olympiad; scope.launch { sheetState.show() }
-                                            },
+                                            onClick = { onOlympiadClick(olympiad) }, // Используем переданный колбэк
                                             // onFavouriteClick = { id, isFav -> viewModel.onFavouriteToggle(id, isFav) }, // - добавлю когда сделаю сохранение избранных
                                             animate = animateListItems,
                                             modifier = if (animateListItems) Modifier.animateItemPlacement() else Modifier
@@ -291,7 +392,8 @@ fun OlympiadListScreen(
                                     LinearProgressIndicator(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(horizontal = 8.dp)
+                                            .padding(horizontal = 8.dp),
+                                        color = MaterialTheme.colorScheme.primary // Цвет индикатора
                                     )
                                 }
                             }
@@ -304,19 +406,11 @@ fun OlympiadListScreen(
                                         .weight(1f),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    val hasActiveFilters =
-                                        viewModel.selectedGrades.collectAsState().value.isNotEmpty()
-                                    val hasActiveSearch =
-                                        viewModel.searchQuery.collectAsState().value.isNotEmpty()
-
-                                    if (hasActiveSearch || hasActiveFilters /* || active subjects */) {
-                                        Text(
-                                            "Ничего не найдено по вашему запросу или фильтрам.",
-                                            textAlign = TextAlign.Center
-                                        )
-                                    } else {
-                                        Text("Олимпиады не найдены.", textAlign = TextAlign.Center)
-                                    }
+                                    Text(
+                                        "Ничего не найдено или олимпиады отсутствуют.", // Упрощенное сообщение для общей Composable
+                                        textAlign = TextAlign.Center,
+                                        color = MaterialTheme.colorScheme.onBackground // Цвет текста на фоне
+                                    )
                                 }
                             }
                         }
@@ -329,19 +423,392 @@ fun OlympiadListScreen(
             if (errorState !is ErrorState.NoError) {
                 ErrorDisplay( // <-- Используем универсальный компонент ErrorDisplay
                     errorState = errorState, // Передаем текущее состояние ошибки
-                    onRetryClicked = { viewModel.onRetryClicked() }, // Передаем колбэк повтора
+                    onRetryClicked = onRetryClicked, // Используем переданный колбэк
                     modifier = Modifier.fillMaxSize()
                 )
             }
         }
 
-        if (paginationMetadata.totalPages > 1 && errorState is ErrorState.NoError) {
+        // Панель пагинации отображается только при отсутствии ошибки и более одной страницы
+        if (totalPages > 1 && errorState is ErrorState.NoError) {
             PaginationPanel(
                 currentPage = currentPage,
-                totalPages = paginationMetadata.totalPages,
-                onPageChange = { viewModel.onPageChanged(it) },
+                totalPages = totalPages,
+                onPageChange = onPageChanged,
                 animateTransitions = animatePageTransitions
             )
         }
+    }
+}
+
+
+// --- PREVIEWS ДЛЯ OlympiadListScreenContent ---
+
+// Вспомогательные данные для превью
+private val sampleOlympiads = List(10) { index ->
+    Olympiad(
+        id = (index + 1).toLong(),
+        name = "Олимпиада ${index + 1}",
+        description = "Описание олимпиады ${index + 1}.",
+        minGrade = 5 + index % 7,
+        maxGrade = 11,
+        subjects = listOf(Subject("Предмет ${index % 3 + 1}")),
+        stages = listOf(
+            Stage(
+                "Этап 1",
+                LocalDate.of(2024, 12, 31),
+                LocalDate.of(2025, 1, 15)
+            )
+        ),
+        link = "http://example.com/${index + 1}",
+        keywords = "Ключевое слово ${index + 1}"
+    )
+}
+
+private val samplePaginationMetadata = PaginationMetadata(
+    currentPage = 1,
+    totalPages = 5,
+    pageSize = 10,
+    totalItems = 50
+)
+
+private val sampleFilterUiState = FilterUiState(
+    selectedGrades = listOf(9, 10, 11)
+    // ... другие состояния фильтров
+)
+
+
+// Превью: Состояние загрузки (пустой список)
+@Preview(showBackground = true, name = "Loading (Empty) - Light Theme")
+@Preview(
+    showBackground = true,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    name = "Loading (Empty) - Dark Theme"
+)
+@Composable
+fun PreviewOlympiadListScreen_LoadingEmpty() {
+    PreviewTheme {
+        OlympiadListScreenContent(
+            olympiads = emptyList(), // Пустой список
+            paginationMetadata = samplePaginationMetadata.copy(currentPage = 1),
+            currentPage = 1,
+            totalPages = samplePaginationMetadata.totalPages,
+            isLoading = true, // Идет загрузка
+            errorState = ErrorState.NoError, // Нет ошибки
+            searchQuery = "",
+            filterUiState = FilterUiState(), // Без активных фильтров
+            availableGrades = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
+            animatePageTransitions = true,
+            animateListItems = true,
+            listState = rememberLazyListState(), // Мок состояния списка
+            onSearchQueryChanged = {},
+            onFilterIconClick = {},
+            onPageChanged = {},
+            onOlympiadClick = {},
+            onRetryClicked = {},
+            onGradeFilterUiChanged = { _, _ -> },
+            applyFilters = {},
+            discardFilterChanges = {},
+            resetAndApplyFilters = {}
+        )
+    }
+}
+
+// Превью: Состояние загрузки (загрузка следующей страницы, список не пуст)
+@Preview(showBackground = true, name = "Loading (Next Page) - Light Theme")
+@Preview(
+    showBackground = true,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    name = "Loading (Next Page) - Dark Theme"
+)
+@Composable
+fun PreviewOlympiadListScreen_LoadingNextPage() {
+    PreviewTheme {
+        OlympiadListScreenContent(
+            olympiads = sampleOlympiads, // Список не пуст
+            paginationMetadata = samplePaginationMetadata.copy(currentPage = 1),
+            currentPage = 1,
+            totalPages = samplePaginationMetadata.totalPages,
+            isLoading = true, // Идет загрузка
+            errorState = ErrorState.NoError, // Нет ошибки
+            searchQuery = "",
+            filterUiState = FilterUiState(),
+            availableGrades = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
+            animatePageTransitions = true,
+            animateListItems = true,
+            listState = rememberLazyListState(), // Мок состояния списка
+            onSearchQueryChanged = {},
+            onFilterIconClick = {},
+            onPageChanged = {},
+            onOlympiadClick = {},
+            onRetryClicked = {},
+            onGradeFilterUiChanged = { _, _ -> },
+            applyFilters = {},
+            discardFilterChanges = {},
+            resetAndApplyFilters = {}
+        )
+    }
+}
+
+
+// Превью: Состояние загружено (с данными, первая страница)
+@Preview(showBackground = true, name = "Loaded (Data, Page 1) - Light Theme")
+@Preview(
+    showBackground = true,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    name = "Loaded (Data, Page 1) - Dark Theme"
+)
+@Composable
+fun PreviewOlympiadListScreen_LoadedDataPage1() {
+    PreviewTheme {
+        OlympiadListScreenContent(
+            olympiads = sampleOlympiads, // Список с данными
+            paginationMetadata = samplePaginationMetadata.copy(currentPage = 1),
+            currentPage = 1,
+            totalPages = samplePaginationMetadata.totalPages,
+            isLoading = false, // Загрузка завершена
+            errorState = ErrorState.NoError, // Нет ошибки
+            searchQuery = "",
+            filterUiState = FilterUiState(),
+            availableGrades = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
+            animatePageTransitions = true,
+            animateListItems = true,
+            listState = rememberLazyListState(),
+            onSearchQueryChanged = {},
+            onFilterIconClick = {},
+            onPageChanged = {},
+            onOlympiadClick = {},
+            onRetryClicked = {},
+            onGradeFilterUiChanged = { _, _ -> },
+            applyFilters = {},
+            discardFilterChanges = {},
+            resetAndApplyFilters = {}
+        )
+    }
+}
+
+// Превью: Состояние загружено (с данными, средняя страница)
+@Preview(showBackground = true, name = "Loaded (Data, Middle Page) - Light Theme")
+@Preview(
+    showBackground = true,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    name = "Loaded (Data, Middle Page) - Dark Theme"
+)
+@Composable
+fun PreviewOlympiadListScreen_LoadedDataMiddlePage() {
+    PreviewTheme {
+        OlympiadListScreenContent(
+            olympiads = sampleOlympiads, // Список с данными
+            paginationMetadata = samplePaginationMetadata.copy(currentPage = 3),
+            currentPage = 3,
+            totalPages = samplePaginationMetadata.totalPages,
+            isLoading = false, // Загрузка завершена
+            errorState = ErrorState.NoError, // Нет ошибки
+            searchQuery = "",
+            filterUiState = FilterUiState(),
+            availableGrades = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
+            animatePageTransitions = true,
+            animateListItems = true,
+            listState = rememberLazyListState(),
+            onSearchQueryChanged = {},
+            onFilterIconClick = {},
+            onPageChanged = {},
+            onOlympiadClick = {},
+            onRetryClicked = {},
+            onGradeFilterUiChanged = { _, _ -> },
+            applyFilters = {},
+            discardFilterChanges = {},
+            resetAndApplyFilters = {}
+        )
+    }
+}
+
+
+// Превью: Состояние загружено (пустой список, нет поиска/фильтров)
+@Preview(showBackground = true, name = "Loaded (Empty, No Search/Filters) - Light Theme")
+@Preview(
+    showBackground = true,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    name = "Loaded (Empty, No Search/Filters) - Dark Theme"
+)
+@Composable
+fun PreviewOlympiadListScreen_LoadedEmptyNoSearchFilters() {
+    PreviewTheme {
+        OlympiadListScreenContent(
+            olympiads = emptyList(), // Пустой список
+            paginationMetadata = samplePaginationMetadata.copy(
+                currentPage = 1,
+                totalItems = 0,
+                totalPages = 0
+            ), // Нет страниц
+            currentPage = 1,
+            totalPages = 0, // Нет страниц
+            isLoading = false, // Загрузка завершена
+            errorState = ErrorState.NoError, // Нет ошибки
+            searchQuery = "", // Нет поиска
+            filterUiState = FilterUiState(), // Нет фильтров
+            availableGrades = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
+            animatePageTransitions = true,
+            animateListItems = true,
+            listState = rememberLazyListState(),
+            onSearchQueryChanged = {},
+            onFilterIconClick = {},
+            onPageChanged = {},
+            onOlympiadClick = {},
+            onRetryClicked = {},
+            onGradeFilterUiChanged = { _, _ -> },
+            applyFilters = {},
+            discardFilterChanges = {},
+            resetAndApplyFilters = {}
+        )
+    }
+}
+
+// Превью: Состояние загружено (пустой список, с поиском/фильтрами)
+@Preview(showBackground = true, name = "Loaded (Empty, With Search/Filters) - Light Theme")
+@Preview(
+    showBackground = true,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    name = "Loaded (Empty, With Search/Filters) - Dark Theme"
+)
+@Composable
+fun PreviewOlympiadListScreen_LoadedEmptyWithSearchFilters() {
+    PreviewTheme {
+        OlympiadListScreenContent(
+            olympiads = emptyList(), // Пустой список
+            paginationMetadata = samplePaginationMetadata.copy(
+                currentPage = 1,
+                totalItems = 0,
+                totalPages = 0
+            ), // Нет страниц
+            currentPage = 1,
+            totalPages = 0, // Нет страниц
+            isLoading = false, // Загрузка завершена
+            errorState = ErrorState.NoError, // Нет ошибки
+            searchQuery = "Математика", // Активный поиск
+            filterUiState = sampleFilterUiState, // Активные фильтры
+            availableGrades = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
+            animatePageTransitions = true,
+            animateListItems = true,
+            listState = rememberLazyListState(),
+            onSearchQueryChanged = {},
+            onFilterIconClick = {},
+            onPageChanged = {},
+            onOlympiadClick = {},
+            onRetryClicked = {},
+            onGradeFilterUiChanged = { _, _ -> },
+            applyFilters = {},
+            discardFilterChanges = {},
+            resetAndApplyFilters = {}
+        )
+    }
+}
+
+
+// Превью: Состояние сетевой ошибки
+@Preview(showBackground = true, name = "Network Error - Light Theme")
+@Preview(
+    showBackground = true,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    name = "Network Error - Dark Theme"
+)
+@Composable
+fun PreviewOlympiadListScreen_NetworkError() {
+    PreviewTheme {
+        OlympiadListScreenContent(
+            olympiads = emptyList(), // Список может быть пустым или нет, но ошибка перекрывает
+            paginationMetadata = samplePaginationMetadata.copy(currentPage = 1),
+            currentPage = 1,
+            totalPages = samplePaginationMetadata.totalPages,
+            isLoading = false, // Загрузка, возможно, завершилась ошибкой
+            errorState = ErrorState.NetworkError, // Сетевая ошибка
+            searchQuery = "",
+            filterUiState = FilterUiState(),
+            availableGrades = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
+            animatePageTransitions = true,
+            animateListItems = true,
+            listState = rememberLazyListState(),
+            onSearchQueryChanged = {},
+            onFilterIconClick = {},
+            onPageChanged = {},
+            onOlympiadClick = {},
+            onRetryClicked = {},
+            onGradeFilterUiChanged = { _, _ -> },
+            applyFilters = {},
+            discardFilterChanges = {},
+            resetAndApplyFilters = {}
+        )
+    }
+}
+
+// Превью: Состояние серверной ошибки (с сообщением)
+@Preview(showBackground = true, name = "Server Error (With Message) - Light Theme")
+@Preview(
+    showBackground = true,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    name = "Server Error (With Message) - Dark Theme"
+)
+@Composable
+fun PreviewOlympiadListScreen_ServerErrorWithMessage() {
+    PreviewTheme {
+        OlympiadListScreenContent(
+            olympiads = emptyList(), // Список может быть пустым или нет
+            paginationMetadata = samplePaginationMetadata.copy(currentPage = 1),
+            currentPage = 1,
+            totalPages = samplePaginationMetadata.totalPages,
+            isLoading = false,
+            errorState = ErrorState.ServerError("Ошибка при обработке запроса на сервере."), // Серверная ошибка с сообщением
+            searchQuery = "",
+            filterUiState = FilterUiState(),
+            availableGrades = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
+            animatePageTransitions = true,
+            animateListItems = true,
+            listState = rememberLazyListState(),
+            onSearchQueryChanged = {},
+            onFilterIconClick = {},
+            onPageChanged = {},
+            onOlympiadClick = {},
+            onRetryClicked = {},
+            onGradeFilterUiChanged = { _, _ -> },
+            applyFilters = {},
+            discardFilterChanges = {},
+            resetAndApplyFilters = {}
+        )
+    }
+}
+
+// Превью: Состояние серверной ошибки (без сообщения)
+@Preview(showBackground = true, name = "Server Error (No Message) - Light Theme")
+@Preview(
+    showBackground = true,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    name = "Server Error (No Message) - Dark Theme"
+)
+@Composable
+fun PreviewOlympiadListScreen_ServerErrorNoMessage() {
+    PreviewTheme {
+        OlympiadListScreenContent(
+            olympiads = emptyList(), // Список может быть пустым или нет
+            paginationMetadata = samplePaginationMetadata.copy(currentPage = 1),
+            currentPage = 1,
+            totalPages = samplePaginationMetadata.totalPages,
+            isLoading = false,
+            errorState = ErrorState.ServerError(null), // Серверная ошибка без сообщения
+            searchQuery = "",
+            filterUiState = FilterUiState(),
+            availableGrades = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
+            animatePageTransitions = true,
+            animateListItems = true,
+            listState = rememberLazyListState(),
+            onSearchQueryChanged = {},
+            onFilterIconClick = {},
+            onPageChanged = {},
+            onOlympiadClick = {},
+            onRetryClicked = {},
+            onGradeFilterUiChanged = { _, _ -> },
+            applyFilters = {},
+            discardFilterChanges = {},
+            resetAndApplyFilters = {}
+        )
     }
 }
