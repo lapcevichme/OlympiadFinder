@@ -5,6 +5,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -267,7 +268,7 @@ private fun OlympiadListScreenContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background) // Устанавливаем фон экрана из темы
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // Search Bar Row
         Row(
@@ -286,7 +287,7 @@ private fun OlympiadListScreenContent(
                         "Поиск олимпиад...",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                }, // Цвет метки
+                },
                 singleLine = true,
                 leadingIcon = {
                     Icon(
@@ -294,7 +295,7 @@ private fun OlympiadListScreenContent(
                         contentDescription = "Иконка поиска",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                }, // Цвет иконки
+                },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
                         IconButton(onClick = { onSearchQueryChanged("") }) { // Используем переданный колбэк
@@ -302,7 +303,7 @@ private fun OlympiadListScreenContent(
                                 Icons.Default.Close,
                                 contentDescription = "Очистить поиск",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            ) // Цвет иконки
+                            )
                         }
                     }
                 },
@@ -333,7 +334,6 @@ private fun OlympiadListScreenContent(
         }
 
         Box(modifier = Modifier.weight(1f)) { // Box занимает оставшееся место под строкой поиска
-
             // Отображаем контент при УСПЕХЕ (список, пустое состояние, загрузка в пустой список)
             // Этот блок активен ТОЛЬКО если нет активной ошибки
             if (errorState is ErrorState.NoError) {
@@ -365,7 +365,7 @@ private fun OlympiadListScreenContent(
                                         .fillMaxSize()
                                         .weight(1f),
                                     contentAlignment = Alignment.Center
-                                ) { CircularProgressIndicator(color = MaterialTheme.colorScheme.primary) } // Цвет индикатора
+                                ) { CircularProgressIndicator(color = MaterialTheme.colorScheme.primary) }
                             }
 
                             olympiads.isNotEmpty() -> {
@@ -383,7 +383,12 @@ private fun OlympiadListScreenContent(
                                             onClick = { onOlympiadClick(olympiad) }, // Используем переданный колбэк
                                             // onFavouriteClick = { id, isFav -> viewModel.onFavouriteToggle(id, isFav) }, // - добавлю когда сделаю сохранение избранных
                                             animate = animateListItems,
-                                            modifier = if (animateListItems) Modifier.animateItemPlacement() else Modifier
+                                            /*
+                                            modifier = if (animateListItems) Modifier.animateItem(
+                                                fadeInSpec = tween(durationMillis = 300, delayMillis = 10)
+                                            ) else Modifier
+                                             */
+                                            // При добавлении animateItem периодически ломается LazyColumn
                                         )
                                     }
                                 }
@@ -393,7 +398,7 @@ private fun OlympiadListScreenContent(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(horizontal = 8.dp),
-                                        color = MaterialTheme.colorScheme.primary // Цвет индикатора
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                 }
                             }
@@ -409,7 +414,7 @@ private fun OlympiadListScreenContent(
                                     Text(
                                         "Ничего не найдено или олимпиады отсутствуют.", // Упрощенное сообщение для общей Composable
                                         textAlign = TextAlign.Center,
-                                        color = MaterialTheme.colorScheme.onBackground // Цвет текста на фоне
+                                        color = MaterialTheme.colorScheme.onBackground
                                     )
                                 }
                             }
@@ -421,7 +426,7 @@ private fun OlympiadListScreenContent(
             // Отображаем компонент ErrorDisplay ТОЛЬКО если есть ошибка
             // Этот блок активен ТОЛЬКО если errorState НЕ ErrorState.NoError
             if (errorState !is ErrorState.NoError) {
-                ErrorDisplay( // <-- Используем универсальный компонент ErrorDisplay
+                ErrorDisplay( // Используем универсальный компонент ErrorDisplay
                     errorState = errorState, // Передаем текущее состояние ошибки
                     onRetryClicked = onRetryClicked, // Используем переданный колбэк
                     modifier = Modifier.fillMaxSize()
