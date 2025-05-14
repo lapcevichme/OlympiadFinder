@@ -1,7 +1,6 @@
 package com.lapcevichme.olympiadfinder.presentation.screens.settings
 
 import android.content.res.Configuration
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -57,7 +56,6 @@ private fun AnimationSettingsScreenContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
             .padding(16.dp)
     ) {
         Text(

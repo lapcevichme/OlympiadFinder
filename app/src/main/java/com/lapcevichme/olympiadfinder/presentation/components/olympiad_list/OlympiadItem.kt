@@ -61,10 +61,10 @@ fun OlympiadItem(
             ),
         interactionSource = interactionSource,
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 1.dp, // Базовое возвышение
+            pressedElevation = 4.dp // Возвышение при нажатии
         )
-        // elevation = CardDefaults.cardElevation(...) // Можно добавить elevation
     ) {
         Column(
             modifier = Modifier

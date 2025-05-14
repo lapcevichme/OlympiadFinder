@@ -1,8 +1,6 @@
 package com.lapcevichme.olympiadfinder.presentation.screens.settings
 
 import android.content.res.Configuration
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -60,7 +58,6 @@ private fun AppearanceSettingsScreenContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
             .padding(16.dp)
     ) {
         Text(
@@ -227,13 +224,7 @@ fun PreviewAppearanceSettingsScreen_SystemDark_Monospace() {
 @Composable
 fun PreviewThemeRadioButton_Selected() {
     PreviewTheme {
-        Box(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.background)
-                .padding(8.dp)
-        ) {
-            ThemeRadioButton(text = "Selected Option", selected = true, onClick = {})
-        }
+        ThemeRadioButton(text = "Selected Option", selected = true, onClick = {})
     }
 }
 
@@ -246,12 +237,6 @@ fun PreviewThemeRadioButton_Selected() {
 @Composable
 fun PreviewThemeRadioButton_Unselected() {
     PreviewTheme {
-        Box(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.background)
-                .padding(8.dp)
-        ) {
-            ThemeRadioButton(text = "Unselected Option", selected = false, onClick = {})
-        }
+        ThemeRadioButton(text = "Unselected Option", selected = false, onClick = {})
     }
 }

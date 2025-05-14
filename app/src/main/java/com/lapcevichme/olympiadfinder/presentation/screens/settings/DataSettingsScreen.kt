@@ -1,7 +1,6 @@
 package com.lapcevichme.olympiadfinder.presentation.screens.settings
 
 import android.content.res.Configuration
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,7 +38,6 @@ private fun DataSettingsScreenContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
             .padding(16.dp)
     ) {
         Text(

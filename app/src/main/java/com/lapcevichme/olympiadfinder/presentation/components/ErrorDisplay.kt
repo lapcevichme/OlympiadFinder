@@ -1,6 +1,5 @@
 package com.lapcevichme.olympiadfinder.presentation.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,9 +33,7 @@ fun ErrorDisplay(
 
         is ErrorState.NetworkError -> {
             Column(
-                modifier = modifier
-                    .background(MaterialTheme.colorScheme.surface)
-                    .padding(16.dp),
+                modifier = modifier.padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -55,9 +52,7 @@ fun ErrorDisplay(
 
         is ErrorState.ServerError -> {
             Column(
-                modifier = modifier
-                    .background(MaterialTheme.colorScheme.surface)
-                    .padding(16.dp),
+                modifier = modifier.padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {

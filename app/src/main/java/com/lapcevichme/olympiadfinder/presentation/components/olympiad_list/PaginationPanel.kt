@@ -9,7 +9,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -44,7 +43,6 @@ fun PaginationPanel(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
             .padding(horizontal = 8.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
@@ -55,8 +53,7 @@ fun PaginationPanel(
         ) {
             Icon(
                 Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Предыдущая страница",
-                tint = MaterialTheme.colorScheme.onSurface
+                contentDescription = "Предыдущая страница"
             )
         }
         Spacer(modifier = Modifier.width(16.dp))
@@ -79,8 +76,7 @@ fun PaginationPanel(
         ) { targetPage ->
             Text(
                 text = "$targetPage / $totalPages",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                style = MaterialTheme.typography.bodyMedium
             )
         }
 
@@ -91,8 +87,7 @@ fun PaginationPanel(
         ) {
             Icon(
                 Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = "Следующая страница",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                contentDescription = "Следующая страница"
             )
         }
     }

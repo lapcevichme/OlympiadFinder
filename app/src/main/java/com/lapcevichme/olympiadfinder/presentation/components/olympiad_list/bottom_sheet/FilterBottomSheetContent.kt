@@ -1,6 +1,5 @@
 package com.lapcevichme.olympiadfinder.presentation.components.olympiad_list.bottom_sheet
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -34,7 +33,6 @@ fun FilterBottomSheetContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
             .padding(16.dp)
     ) {
         Text(

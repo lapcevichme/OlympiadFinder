@@ -5,14 +5,12 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.SizeTransform
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -266,15 +264,12 @@ private fun OlympiadListScreenContent(
     resetAndApplyFilters: () -> Unit
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+        modifier = Modifier.fillMaxSize()
     ) {
         // Search Bar Row
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface)
                 .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -292,8 +287,7 @@ private fun OlympiadListScreenContent(
                 leadingIcon = {
                     Icon(
                         Icons.Default.Search,
-                        contentDescription = "Иконка поиска",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        contentDescription = "Иконка поиска"
                     )
                 },
                 trailingIcon = {
@@ -301,8 +295,7 @@ private fun OlympiadListScreenContent(
                         IconButton(onClick = { onSearchQueryChanged("") }) { // Используем переданный колбэк
                             Icon(
                                 Icons.Default.Close,
-                                contentDescription = "Очистить поиск",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                contentDescription = "Очистить поиск"
                             )
                         }
                     }
@@ -327,8 +320,7 @@ private fun OlympiadListScreenContent(
             IconButton(onClick = onFilterIconClick) { // Используем переданный колбэк
                 Icon(
                     Icons.Default.Menu,
-                    contentDescription = "Фильтры",
-                    tint = MaterialTheme.colorScheme.onSurface
+                    contentDescription = "Фильтры"
                 )
             }
         }
