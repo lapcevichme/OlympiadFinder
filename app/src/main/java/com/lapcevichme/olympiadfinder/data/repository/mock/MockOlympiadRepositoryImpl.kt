@@ -12,6 +12,11 @@ import kotlinx.coroutines.flow.flow
 import java.time.LocalDate
 import javax.inject.Inject
 
+/**
+ * Моковая реализация интерфейса [OlympiadRepository].
+ * Используется для предоставления фейковых данных об олимпиадах и предметах
+ * для целей тестирования и локальной разработки.
+ */
 class MockOlympiadRepositoryImpl @Inject constructor() : OlympiadRepository {
 
     private val allOlympiads = (1..100).map { i ->
@@ -36,10 +41,23 @@ class MockOlympiadRepositoryImpl @Inject constructor() : OlympiadRepository {
         )
     }
 
+    /**
+     * Возвращает [Flow] с [Result], содержащим моковый список всех олимпиад.
+     * Данные генерируются статически при инициализации мока.
+     *
+     * @return [Flow] с [Result], содержащим список [Olympiad].
+     */
     override fun getAllOlympiads(): Flow<Result<List<Olympiad>>> = flow {
         emit(Result.success(allOlympiads))
     }
 
+    /**
+     * Возвращает [Resource] с моковой олимпиадой по указанному [id].
+     * Если олимпиада с таким ID не найдена в моковых данных, возвращает [Resource.failure].
+     *
+     * @param id Уникальный идентификатор олимпиады.
+     * @return [Resource], содержащий объект [Olympiad] или ошибку.
+     */
     override suspend fun getOlympiadById(id: Long): Resource<Olympiad> {
         val olympiad = allOlympiads.find { it.id == id }
         return if (olympiad != null) {
@@ -49,7 +67,17 @@ class MockOlympiadRepositoryImpl @Inject constructor() : OlympiadRepository {
         }
     }
 
-    // Функция для получения олимпиад с пагинацией
+    /**
+     * Возвращает [Flow] с [Resource], содержащим моковый пагинированный список олимпиад.
+     * Поддерживает фильтрацию по поисковому запросу и классам, а также пагинацию.
+     *
+     * @param page Номер страницы для запроса.
+     * @param pageSize Количество элементов на странице.
+     * @param query Поисковый запрос (может быть null).
+     * @param selectedGrades Список выбранных классов для фильтрации (может быть пустым).
+     * @param selectedSubjects Список выбранных ID предметов для фильтрации (не реализовано в моке).
+     * @return [Flow] с [Resource], содержащим [PaginatedResponse].
+     */
     override fun getPaginatedOlympiads(
         page: Int,
         pageSize: Int,
@@ -57,11 +85,7 @@ class MockOlympiadRepositoryImpl @Inject constructor() : OlympiadRepository {
         selectedGrades: List<Int>,
         selectedSubjects: List<Long>
     ): Flow<Resource<PaginatedResponse<Olympiad>>> = flow {
-
-        // Начинаем с полного списка
         var currentFilteredList = allOlympiads
-
-        // 1. Применяем фильтрацию по запросу, если он есть
         if (!query.isNullOrBlank()) {
             val lowerCaseQuery = query.lowercase()
             currentFilteredList = currentFilteredList.filter { olympiad ->
@@ -72,41 +96,27 @@ class MockOlympiadRepositoryImpl @Inject constructor() : OlympiadRepository {
                 }
             }
         }
-
-        // <-- НОВОЕ: 2. Применяем фильтрацию по выбранным классам, если они есть
         if (selectedGrades.isNotEmpty()) {
             currentFilteredList = currentFilteredList.filter { olympiad ->
-                // Олимпиада подходит, если хотя бы один выбранный класс попадает в диапазон ее minGrade-maxGrade
-                // Обрабатываем случай, когда minGrade или maxGrade у олимпиады null
                 if (olympiad.minGrade == null || olympiad.maxGrade == null) {
-                    // Если у олимпиады не указан диапазон классов, она не подходит под конкретный фильтр по классу
                     false
                 } else {
-                    // Проверяем, что диапазон олимпиады (minGrade - maxGrade) пересекается с любым из selectedGrades
                     selectedGrades.any { selectedGrade ->
                         selectedGrade >= olympiad.minGrade && selectedGrade <= olympiad.maxGrade
                     }
                 }
             }
         }
-
-
-        // 3. Применяем пагинацию к ТЕКУЩЕМУ ОТФИЛЬТРОВАННОМУ списку (после поиска и фильтров по классам)
-        val totalItems = currentFilteredList.size // Общее количество элементов после всех фильтров
+        val totalItems = currentFilteredList.size
         val totalPages = (totalItems + pageSize - 1) / pageSize
-
         val startIndex = (page - 1) * pageSize
         val safeStartIndex = maxOf(0, startIndex)
         val endIndex = minOf(safeStartIndex + pageSize, totalItems)
-
         val currentPageItems = if (safeStartIndex < endIndex) {
             currentFilteredList.subList(safeStartIndex, endIndex)
         } else {
             emptyList()
         }
-
-
-        // 4. Создаем PaginatedResponse с данными и метаданными ТЕКУЩЕГО ОТФИЛЬТРОВАННОГО списка
         val response = PaginatedResponse(
             items = currentPageItems, meta = PaginationMetadata(
                 totalItems = totalItems,
@@ -115,12 +125,15 @@ class MockOlympiadRepositoryImpl @Inject constructor() : OlympiadRepository {
                 pageSize = pageSize
             )
         )
-
-        // kotlinx.coroutines.delay(200)
-
         emit(Resource.success(response))
     }
 
+    /**
+     * Возвращает [Resource] с моковым списком доступных предметов.
+     * Данные генерируются статически.
+     *
+     * @return [Resource], содержащий список [Subject].
+     */
     override suspend fun getAvailableSubjects(): Resource<List<Subject>> {
         return Resource.success(
             listOf(

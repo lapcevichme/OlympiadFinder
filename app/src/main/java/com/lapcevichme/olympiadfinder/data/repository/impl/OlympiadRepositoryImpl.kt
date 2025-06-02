@@ -15,6 +15,12 @@ import retrofit2.HttpException
 import java.io.IOException
 import javax.inject.Inject
 
+/**
+ * Реализация интерфейса [OlympiadRepository], отвечающая за получение данных об олимпиадах
+ * и предметах из удаленного API. Использует [OlympiadApiService] для взаимодействия с сетью.
+ *
+ * @property olympiadApiService Сервис для взаимодействия с API олимпиад.
+ */
 class OlympiadRepositoryImpl @Inject constructor(
     private val olympiadApiService: OlympiadApiService
 ) : OlympiadRepository {
@@ -23,6 +29,14 @@ class OlympiadRepositoryImpl @Inject constructor(
         private const val TAG = "OlympiadRepositoryImpl"
     }
 
+    /**
+     * Получает список всех олимпиад из API.
+     * Возвращает [Flow] с [Result], который может содержать либо список [Olympiad] в случае успеха,
+     * либо [HttpException] в случае ошибки HTTP, либо [IOException] в случае сетевой ошибки,
+     * либо другое [Exception] в случае непредвиденной ошибки.
+     *
+     * @return [Flow] с [Result], содержащим список [Olympiad] или ошибку.
+     */
     override fun getAllOlympiads(): Flow<Result<List<Olympiad>>> = flow {
         Log.d(TAG, "Fetching all olympiads...")
         try {
@@ -50,6 +64,15 @@ class OlympiadRepositoryImpl @Inject constructor(
         emit(Result.failure(e))
     }
 
+    /**
+     * Получает олимпиаду по ее уникальному идентификатору.
+     * Возвращает [Resource], который может содержать либо объект [Olympiad] в случае успеха,
+     * либо [HttpException] в случае ошибки HTTP, либо [IOException] в случае сетевой ошибки,
+     * либо [IllegalStateException], если API вернул успешный ответ, но данные олимпиады были null.
+     *
+     * @param id Уникальный идентификатор олимпиады.
+     * @return [Resource], содержащий объект [Olympiad] или ошибку.
+     */
     override suspend fun getOlympiadById(id: Long): Resource<Olympiad> {
         Log.d(TAG, "Fetching olympiad by ID: $id")
         return try {
@@ -81,6 +104,21 @@ class OlympiadRepositoryImpl @Inject constructor(
     }
 
 
+    /**
+     * Получает пагинированный список олимпиад из API с возможностью фильтрации по странице,
+     * размеру страницы, поисковому запросу, классам и предметам.
+     * Возвращает [Flow] с [Resource], который может содержать [PaginatedResponse] с списком [Olympiad]
+     * и метаданными пагинации в случае успеха, либо [HttpException] в случае ошибки HTTP,
+     * либо [IOException] в случае сетевой ошибки, либо [IllegalStateException], если API вернул
+     * успешный ответ, но данные пагинации были null или неполными.
+     *
+     * @param page Номер страницы для запроса.
+     * @param pageSize Количество элементов на странице.
+     * @param query Поисковый запрос (может быть null).
+     * @param selectedGrades Список выбранных классов для фильтрации (может быть пустым).
+     * @param selectedSubjects Список выбранных ID предметов для фильтрации (может быть пустым).
+     * @return [Flow] с [Resource], содержащим [PaginatedResponse] или ошибку.
+     */
     override fun getPaginatedOlympiads(
         page: Int,
         pageSize: Int,
@@ -139,6 +177,14 @@ class OlympiadRepositoryImpl @Inject constructor(
         }
     }
 
+    /**
+     * Получает список доступных предметов из API.
+     * Возвращает [Resource] с списком [Subject] в случае успеха, либо [HttpException]
+     * в случае ошибки HTTP, либо [IOException] в случае сетевой ошибки, либо
+     * [IllegalStateException], если API вернул успешный ответ, но данные о предметах были null.
+     *
+     * @return [Resource], содержащий список [Subject] или ошибку.
+     */
     override suspend fun getAvailableSubjects(): Resource<List<Subject>> {
         Log.d(TAG, "Fetching available subjects...")
         return try {

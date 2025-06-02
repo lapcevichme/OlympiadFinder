@@ -6,6 +6,10 @@ import com.lapcevichme.olympiadfinder.domain.repository.OlympiadRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
+/**
+ * Use Case для получения списка всех олимпиад.
+ * Обращается к [OlympiadRepository] для получения данных.
+ */
 class GetAllOlympiadsUseCase @Inject constructor(
     private val olympiadRepository: OlympiadRepository
 ) {
