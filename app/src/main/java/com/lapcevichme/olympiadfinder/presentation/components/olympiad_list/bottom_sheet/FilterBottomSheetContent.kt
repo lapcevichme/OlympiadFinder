@@ -1,5 +1,6 @@
 package com.lapcevichme.olympiadfinder.presentation.components.olympiad_list.bottom_sheet
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -10,14 +11,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.lapcevichme.olympiadfinder.domain.model.Resource
+import com.lapcevichme.olympiadfinder.domain.model.Subject
 import com.lapcevichme.olympiadfinder.ui.theme.PreviewTheme
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -26,7 +31,9 @@ fun FilterBottomSheetContent(
     availableGrades: List<Int>,
     selectedGrades: List<Int>,
     onGradeSelected: (grade: Int, isSelected: Boolean) -> Unit,
-    // TODO: Параметры для фильтров по предметам
+    availableSubjects: Resource<List<Subject>>, // Доступные предметы из ViewModel
+    selectedSubjects: List<Long>, // Выбранные предметы (их ID) из UI состояния
+    onSubjectSelected: (subjectId: Long, isSelected: Boolean) -> Unit,
     onApplyFilters: () -> Unit, // Функция, вызываемая при нажатии кнопки "Применить"
     onResetFilters: () -> Unit
 ) {
@@ -75,7 +82,61 @@ fun FilterBottomSheetContent(
             }
         }
 
-        // TODO: Раздел "Предметы"
+        // Раздел "Предметы"
+
+        Text(
+            "Предметы",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        when (availableSubjects) {
+            is Resource.Loading -> {
+                // Показываем индикатор загрузки, пока предметы грузятся
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                Text("Загрузка предметов...", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            is Resource.Success -> {
+                val subjects = availableSubjects.data
+                if (subjects.isNotEmpty()) {
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        subjects.forEach { subject ->
+                            FilterChip(
+                                selected = subject.id in selectedSubjects,
+                                onClick = {
+                                    onSubjectSelected(
+                                        subject.id,
+                                        subject.id !in selectedSubjects
+                                    )
+                                },
+                                label = {
+                                    Text(
+                                        subject.name,
+                                        color = if (subject.id in selectedSubjects) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            )
+                        }
+                    }
+                } else {
+                    Text("Предметы не найдены.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            is Resource.Failure -> {
+                // Показываем сообщение об ошибке, если загрузка предметов не удалась
+                Text(
+                    "Не удалось загрузить предметы: ${availableSubjects.exception?.message ?: "Неизвестная ошибка"}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -109,7 +170,7 @@ fun FilterBottomSheetContent(
 @Preview(showBackground = true, name = "Light Theme")
 @Preview(
     showBackground = true,
-    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
     name = "Dark Theme"
 )
 @Composable
@@ -120,7 +181,10 @@ fun PreviewFilterBottomSheetContent_Default() {
             selectedGrades = listOf(5, 7, 9),
             onGradeSelected = { _, _ -> },
             onApplyFilters = {},
-            onResetFilters = {}
+            onResetFilters = {},
+            availableSubjects = TODO(),
+            selectedSubjects = TODO(),
+            onSubjectSelected = TODO()
         )
     }
 }
@@ -128,7 +192,7 @@ fun PreviewFilterBottomSheetContent_Default() {
 @Preview(showBackground = true, name = "Light Theme")
 @Preview(
     showBackground = true,
-    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
     name = "Dark Theme"
 )
 @Composable
@@ -139,7 +203,10 @@ fun PreviewFilterBottomSheetContent_NoGradesSelected() {
             selectedGrades = emptyList(),
             onGradeSelected = { _, _ -> },
             onApplyFilters = {},
-            onResetFilters = {}
+            onResetFilters = {},
+            availableSubjects = TODO(),
+            selectedSubjects = TODO(),
+            onSubjectSelected = TODO()
         )
     }
 }

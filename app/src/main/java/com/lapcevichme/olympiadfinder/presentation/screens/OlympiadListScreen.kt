@@ -95,6 +95,8 @@ fun OlympiadListScreen(
 
     val availableGrades = viewModel.availableGrades
 
+    val availableSubjects by viewModel.availableSubjects.collectAsState()
+
     val filtersUiState by viewModel.filtersUiState.collectAsState()
 
     println("OlympiadListScreen: olympiads.pageSize = ${olympiads.size}")
@@ -202,7 +204,14 @@ fun OlympiadListScreen(
                             isSelected
                         ) // Обновляет СОСТОЯНИЕ UI ЛИСТА
                     },
-                    // TODO: Добавить параметры для фильтров по предметам
+                    availableSubjects = availableSubjects, // <-- ПЕРЕДАЕМ ДОСТУПНЫЕ ПРЕДМЕТЫ -->
+                    selectedSubjects = filtersUiState.selectedSubjects, // <-- ПЕРЕДАЕМ ВЫБРАННЫЕ ПРЕДМЕТЫ ИЗ UI СОСТОЯНИЯ -->
+                    onSubjectSelected = { subjectId, isSelected -> // <-- ПЕРЕДАЕМ КОЛЛБЭК ДЛЯ ВЫБОРА ПРЕДМЕТА -->
+                        viewModel.onSubjectFilterUiChanged(
+                            subjectId,
+                            isSelected
+                        )
+                    },
 
                     // Колбэк для кнопки "Применить"
                     onApplyFilters = {
@@ -449,7 +458,7 @@ private val sampleOlympiads = List(10) { index ->
         description = "Описание олимпиады ${index + 1}.",
         minGrade = 5 + index % 7,
         maxGrade = 11,
-        subjects = listOf(Subject("Предмет ${index % 3 + 1}")),
+        subjects = listOf(Subject(0, "Предмет ${index % 3 + 1}")),
         stages = listOf(
             Stage(
                 "Этап 1",

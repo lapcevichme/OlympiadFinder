@@ -5,6 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.lapcevichme.olympiadfinder.data.local.DEFAULT_PAGE_SIZE
 import com.lapcevichme.olympiadfinder.domain.model.Olympiad
 import com.lapcevichme.olympiadfinder.domain.model.PaginationMetadata
+import com.lapcevichme.olympiadfinder.domain.model.Resource
+import com.lapcevichme.olympiadfinder.domain.model.Subject
+import com.lapcevichme.olympiadfinder.domain.usecases.GetAvailableSubjectsUseCase
 import com.lapcevichme.olympiadfinder.domain.usecases.GetPaginatedOlympiadsUseCase
 import com.lapcevichme.olympiadfinder.domain.usecases.settings.GetPageSizePreferenceUseCase
 import com.lapcevichme.olympiadfinder.domain.usecases.settings.animations.GetAnimateListItemsUseCase
@@ -30,6 +33,7 @@ val AVAILABLE_GRADES = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
 @HiltViewModel
 class OlympiadListViewModel @Inject constructor(
     private val getPaginatedOlympiadsUseCase: GetPaginatedOlympiadsUseCase,
+    private val getAvailableSubjectsUseCase: GetAvailableSubjectsUseCase,
     getPageSizePreferenceUseCase: GetPageSizePreferenceUseCase,
     getAnimatePageTransitionsUseCase: GetAnimatePageTransitionsUseCase,
     getAnimateListItemsUseCase: GetAnimateListItemsUseCase
@@ -94,9 +98,13 @@ class OlympiadListViewModel @Inject constructor(
     private val _filtersUiState = MutableStateFlow(FilterUiState())
     val filtersUiState: StateFlow<FilterUiState> = _filtersUiState
 
-    // TODO: StateFlow для доступных и выбранных предметов
-    // private val _selectedSubjects = MutableStateFlow<List<Subject>>(emptyList())
-    // val selectedSubjects: StateFlow<List<Subject>> = _selectedSubjects
+    // StateFlow для доступных предметов (получаются с сервера)
+    private val _availableSubjects = MutableStateFlow<Resource<List<Subject>>>(Resource.loading())
+    val availableSubjects: StateFlow<Resource<List<Subject>>> = _availableSubjects
+
+    // StateFlow для активно выбранных предметов (активные фильтры, передаются в Use Case)
+    private val _selectedSubjects = MutableStateFlow<List<Long>>(emptyList())
+    val selectedSubjects: StateFlow<List<Long>> = _selectedSubjects
 
     private val _errorState =
         MutableStateFlow<ErrorState>(ErrorState.NoError) // Начальное состояние: нет ошибки
@@ -125,10 +133,10 @@ class OlympiadListViewModel @Inject constructor(
             _searchQuery
                 .debounce(300)
                 .distinctUntilChanged(),
-            _selectedGrades
-            // TODO: Добавить Flow выбранных предметов
-        ) { page, size, query, selectedGrades ->
-            LoadParams(page, size, query, selectedGrades)
+            _selectedGrades,
+            _selectedSubjects
+        ) { page, size, query, selectedGrades, selectedSubjects ->
+            LoadParams(page, size, query, selectedGrades, selectedSubjects)
         }
             .distinctUntilChanged()
 
@@ -143,6 +151,7 @@ class OlympiadListViewModel @Inject constructor(
             .onEach { params -> loadData(params) } // Вызываем loadData()
             .launchIn(viewModelScope)
 
+        loadAvailableSubjects()
 
     }
 
@@ -154,33 +163,6 @@ class OlympiadListViewModel @Inject constructor(
         println("ViewModel: Search query changed. Filters preserved. Reset page to 1.")
     }
 
-
-    /*
-    // Изменили loadOlympiads, чтобы принимал размер страницы
-    private fun loadOlympiads(page: Int = _currentPage.value, pageSize: Int = pageSize.value) {
-        println("OlympiadListViewModel: Loading olympiads for page $page with pageSize $pageSize")
-        viewModelScope.launch {
-            _isLoading.value = true
-            // Используем переданный или текущий размер страницы
-            getPaginatedOlympiadsUseCase(page, pageSize)
-                .catch { e -> // Добавим обработку ошибок
-                    println("Error loading olympiads: ${e.message}")
-                    _isLoading.value = false
-                    // Можно показать сообщение об ошибке пользователю через отдельный StateFlow
-                }
-                .collectLatest { response ->
-                    _olympiads.value = response.items
-                    // Обновляем метаданные, включая pageSize из ответа (если API его возвращает)
-                    // или используем текущий запрошенный 'pageSize'
-                    _paginationMetadata.value = response.meta.copy(pageSize = pageSize) // Важно обновить pageSize в метаданных
-                    _isLoading.value = false
-                    println("OlympiadListViewModel: Loaded ${response.items.pageSize} items.")
-                }
-        }
-    }
-    OLD FUNCTION
-
-     */
 
     fun onPageChanged(newPage: Int) {
         // Проверяем, что номер страницы корректен
@@ -217,8 +199,8 @@ class OlympiadListViewModel @Inject constructor(
     fun openFilterSheet() {
         // Копируем текущие активные фильтры в состояние UI
         _filtersUiState.value = FilterUiState(
-            selectedGrades = _selectedGrades.value // Копируем выбранные классы
-            // TODO: скопировать выбранные предметы
+            selectedGrades = _selectedGrades.value, // Копируем выбранные классы
+            selectedSubjects = _selectedSubjects.value
         )
         println("ViewModel: Filter sheet opened, UI state initialized with active filters: ${_filtersUiState.value}")
     }
@@ -239,19 +221,34 @@ class OlympiadListViewModel @Inject constructor(
         println("ViewModel: UI filter changed: grade $grade, selected $isSelected. Current UI selected grades: ${_filtersUiState.value.selectedGrades}")
     }
 
+    // Для предметов
+    fun onSubjectFilterUiChanged(subjectId: Long, isSelected: Boolean) {
+        val currentSelected = _filtersUiState.value.selectedSubjects.toMutableList()
+        if (isSelected) {
+            if (subjectId !in currentSelected) {
+                currentSelected.add(subjectId)
+            }
+        } else {
+            currentSelected.remove(subjectId)
+        }
+        _filtersUiState.value =
+            _filtersUiState.value.copy(selectedSubjects = currentSelected.sorted())
+        println("ViewModel: UI filter changed: subject $subjectId, selected $isSelected. Current UI selected subjects: ${_filtersUiState.value.selectedSubjects}")
+    }
+
     // Функция для ПРИМЕНЕНИЯ фильтров (при нажатии кнопки "Применить")
     fun applyFilters() {
         println("ViewModel: Apply filters button clicked. UI state: ${_filtersUiState.value}. Active state: ${_selectedGrades.value}")
         // Копируем выбранные фильтры из UI состояния в активное состояние фильтров
         val gradesChanged =
             _selectedGrades.value != _filtersUiState.value.selectedGrades // Проверяем, были ли изменения по классам
-        // TODO: Проверить изменения по другим фильтрам
+        val subjectsChanged = _selectedSubjects.value != _filtersUiState.value.selectedSubjects
 
         _selectedGrades.value = _filtersUiState.value.selectedGrades
-        // TODO: обновить активные предметы
+        _selectedSubjects.value = _filtersUiState.value.selectedSubjects
 
         // Если какие-либо фильтры изменились, сбрасываем пагинацию на первую страницу
-        if (gradesChanged /* || subjectsChanged */) {
+        if (gradesChanged || subjectsChanged) {
             _currentPage.value = 1
             println("ViewModel: Filters changed, resetting page to 1.")
         }
@@ -273,7 +270,7 @@ class OlympiadListViewModel @Inject constructor(
     fun resetAndApplyFilters() {
         println("ViewModel: Reset and apply filters button clicked.")
         _selectedGrades.value = emptyList()
-        // TODO: сбросить активные предметы
+        _selectedSubjects.value = emptyList()
 
         // Сбрасываем UI состояние фильтров к дефолту, чтобы при следующем открытии они были чистыми
         _filtersUiState.value = FilterUiState()
@@ -288,10 +285,11 @@ class OlympiadListViewModel @Inject constructor(
         _displayedPage.value = 1
         _searchQuery.value = ""
         _selectedGrades.value = emptyList()
+        _selectedSubjects.value = emptyList()
 
         _filtersUiState.value = FilterUiState()
         println("ViewModel: Refresh data, reset active filters and UI state.")
-        // TODO: Сбрасывать выбранные предметы
+
     }
 
     fun onRetryClicked() {
@@ -317,7 +315,8 @@ class OlympiadListViewModel @Inject constructor(
                 page = params.page,
                 pageSize = params.pageSize,
                 query = params.query,
-                selectedGrades = params.selectedGrades
+                selectedGrades = params.selectedGrades,
+                selectedSubjects = params.selectedSubjects
             )
 
                 // Обрабатываем РЕЗУЛЬТАТ (успех или ошибка) в блоке onEach
@@ -344,8 +343,8 @@ class OlympiadListViewModel @Inject constructor(
                             println("ViewModel: loadData success. Loaded ${finalPaginatedResponse.items.size} items for page ${finalPaginatedResponse.meta.currentPage}.")
                         },
                         onFailure = { e -> // e - это Throwable из Result.failure
-                            println("ViewModel: loadData failure. Exception: ${e.message}")
-                            println("ViewModel: Caught exception type: ${e::class.java.name}") // ЛОГ ТИПА ИСКЛЮЧЕНИЯ
+                            println("ViewModel: loadData failure. Exception: ${e?.message}")
+                            //println("ViewModel: Caught exception type: ${e::class.java.name}") // ЛОГ ТИПА ИСКЛЮЧЕНИЯ
 
                             // Обновляем UI состояние при ошибке
                             _olympiads.value = emptyList() // Очищаем список
@@ -357,18 +356,46 @@ class OlympiadListViewModel @Inject constructor(
                             ) // Сбрасываем метаданные
 
                             // Устанавливаем состояние ошибки в зависимости от типа исключения
-                            _errorState.value = when (e) {
-                                is IOException -> ErrorState.NetworkError // Ошибки ввода-вывода (сеть)
-                                is HttpException -> ErrorState.ServerError(e.message()) // Ошибки HTTP (сервер)
-                                is IllegalStateException -> ErrorState.ServerError(e.message) // Ошибка данных из репозитория
-                                else -> ErrorState.ServerError(
-                                    e.message ?: "Неизвестная ошибка загрузки"
-                                ) // Остальные ошибки
+                            if (e != null) {
+                                _errorState.value = when (e) {
+                                    is IOException -> ErrorState.NetworkError // Ошибки ввода-вывода (сеть)
+                                    is HttpException -> ErrorState.ServerError(e.message()) // Ошибки HTTP (сервер)
+                                    is IllegalStateException -> ErrorState.ServerError(e.message) // Ошибка данных из репозитория
+                                    else -> ErrorState.ServerError(
+                                        e.message ?: "Неизвестная ошибка загрузки"
+                                    )
+                                }
                             }
-                        }
+                        },
+                        onLoading = {}
                     )
                 }
                 .launchIn(viewModelScope)
         }
     }
+
+    private fun loadAvailableSubjects() {
+        viewModelScope.launch {
+            println("ViewModel: Loading available subjects...")
+            _availableSubjects.value = Resource.loading() // Устанавливаем состояние загрузки
+
+            val result = getAvailableSubjectsUseCase() // Вызываем Use Case
+
+            _availableSubjects.value = result // Обновляем StateFlow результатом
+            result.fold(
+                onSuccess = { subjects ->
+                    println("ViewModel: Successfully loaded ${subjects.size} available subjects.")
+                },
+                onFailure = { e ->
+                    if (e != null) {
+                        println("ViewModel: Failed to load available subjects: ${e.message}")
+                    }
+                    // Можно также установить _errorState.value, если это критичная ошибка
+                    // Но для списка фильтров, возможно, достаточно просто показать пустое состояние
+                },
+                onLoading = {}
+            )
+        }
+    }
+
 }

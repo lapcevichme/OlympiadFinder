@@ -164,8 +164,8 @@ fun PreviewOlympiadDetailsSheetContent_FullData() {
             minGrade = 9,
             maxGrade = 11,
             subjects = listOf(
-                Subject(name = "Информатика"),
-                Subject(name = "Программирование")
+                Subject(0, name = "Информатика"),
+                Subject(1, name = "Программирование")
             ), // Используем твою модель Subject
             stages = listOf(
                 Stage(name = "Школьный", startDate = null, endDate = null),

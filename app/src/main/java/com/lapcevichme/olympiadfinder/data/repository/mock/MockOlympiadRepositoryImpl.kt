@@ -3,6 +3,7 @@ package com.lapcevichme.olympiadfinder.data.repository.mock
 import com.lapcevichme.olympiadfinder.domain.model.Olympiad
 import com.lapcevichme.olympiadfinder.domain.model.PaginatedResponse
 import com.lapcevichme.olympiadfinder.domain.model.PaginationMetadata
+import com.lapcevichme.olympiadfinder.domain.model.Resource
 import com.lapcevichme.olympiadfinder.domain.model.Stage
 import com.lapcevichme.olympiadfinder.domain.model.Subject
 import com.lapcevichme.olympiadfinder.domain.repository.OlympiadRepository
@@ -17,7 +18,7 @@ class MockOlympiadRepositoryImpl @Inject constructor() : OlympiadRepository {
         Olympiad(
             id = i.toLong(),
             name = "Олимпиада $i",
-            subjects = listOf(Subject("Предмет $i"), Subject("Математика"), Subject("Физика")),
+            subjects = listOf(Subject(0,"Предмет $i"), Subject(1,"Математика"), Subject(2,"Физика")),
             minGrade = i % 5 + 1,
             maxGrade = 11,
             stages = listOf(
@@ -42,8 +43,9 @@ class MockOlympiadRepositoryImpl @Inject constructor() : OlympiadRepository {
         page: Int,
         pageSize: Int,
         query: String?,
-        selectedGrades: List<Int>
-    ): Flow<Result<PaginatedResponse<Olympiad>>> = flow {
+        selectedGrades: List<Int>,
+        selectedSubjects: List<Long>
+    ): Flow<Resource<PaginatedResponse<Olympiad>>> = flow {
 
         // Начинаем с полного списка
         var currentFilteredList = allOlympiads
@@ -107,7 +109,14 @@ class MockOlympiadRepositoryImpl @Inject constructor() : OlympiadRepository {
 
         // kotlinx.coroutines.delay(200)
 
-        emit(Result.success(response))
+        emit(Resource.success(response))
     }
 
+    override suspend fun getAvailableSubjects(): Resource<List<Subject>> {
+        return Resource.success(listOf(
+            Subject(id = 1, name = "Математика"),
+            Subject(id = 2, name = "Физика"),
+            Subject(id = 3, name = "Информатика")
+        ))
+    }
 }

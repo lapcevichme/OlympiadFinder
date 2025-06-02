@@ -20,6 +20,7 @@ data class NetworkOlympiad(
 )
 
 data class NetworkSubject(
+    val id: Long,
     val name: String
 )
 
@@ -29,11 +30,11 @@ data class NetworkStage(
     @SerializedName("end_date") val endDate: String?
 )
 
-private fun NetworkOlympiad.toDomain(): Olympiad {
+fun NetworkOlympiad.toDomain(): Olympiad {
     return Olympiad(
         id = id,
         name = name,
-        subjects = subjects?.map { Subject(it.name) } ?: emptyList(),
+        subjects = subjects?.map { it.toDomain() } ?: emptyList(),
         minGrade = minGrade,
         maxGrade = maxGrade,
         stages = stages?.map { it.toDomain() } ?: emptyList(),
@@ -43,12 +44,18 @@ private fun NetworkOlympiad.toDomain(): Olympiad {
     )
 }
 
-
-private fun NetworkStage.toDomain(): Stage {
+fun NetworkStage.toDomain(): Stage {
     val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
     return Stage(
         name = name,
         startDate = startDate?.let { runCatching { LocalDate.parse(it, dateFormatter) }.getOrNull() },
         endDate = endDate?.let { runCatching { LocalDate.parse(it, dateFormatter) }.getOrNull() }
+    )
+}
+
+fun NetworkSubject.toDomain(): Subject {
+    return Subject(
+        id = this.id,
+        name = this.name
     )
 }
