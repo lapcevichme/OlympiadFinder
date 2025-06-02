@@ -19,10 +19,17 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.io.File
 import javax.inject.Singleton
 
+/**
+ * Hilt модуль, предоставляющий зависимости, связанные с сетевым взаимодействием.
+ */
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
+    /**
+     * Предоставляет экземпляр [Gson] для сериализации и десериализации JSON.
+     * Устанавливает формат даты по умолчанию.
+     */
     @Provides
     @Singleton
     fun provideGson(): Gson {
@@ -31,24 +38,42 @@ object NetworkModule {
             .create()
     }
 
+    /**
+     * Предоставляет директорию для кэша OkHttp. Кэш хранится в поддиректории "okhttp_cache"
+     * внутри стандартной директории кэша приложения.
+     *
+     * @param context Контекст приложения.
+     * @return [File] - директория кэша.
+     */
     @Provides
     @Singleton
     fun provideCacheDir(@ApplicationContext context: Context): File {
-        // Создаем поддиректорию "okhttp_cache" внутри стандартной директории кэша приложения
         val cacheDir = File(context.cacheDir, "okhttp_cache")
         cacheDir.mkdirs()
         return cacheDir
     }
 
+    /**
+     * Предоставляет экземпляр [Cache] для использования с OkHttpClient.
+     * Устанавливает максимальный размер кэша в 10 MiB.
+     *
+     * @param cacheDir Директория кэша, предоставленная [provideCacheDir].
+     * @return [Cache] - экземпляр кэша OkHttp.
+     */
     @Provides
     @Singleton
-    // Принимаем директорию кэша, которую предоставила предыдущая функция
     fun provideCache(cacheDir: File): Cache {
-        // Определяем максимальный размер кэша 10 MiB
-        val cacheSize = 10 * 1024 * 1024L
+        val cacheSize = 10 * 1024 * 1024L // 10 MiB
         return Cache(cacheDir, cacheSize)
     }
 
+    /**
+     * Предоставляет сконфигурированный экземпляр [OkHttpClient] для выполнения сетевых запросов.
+     * Включает логирование запросов в режиме отладки и использует предоставленный [Cache].
+     *
+     * @param cache Экземпляр [Cache], предоставленный [provideCache].
+     * @return [OkHttpClient] - сконфигурированный HTTP клиент.
+     */
     @Provides
     @Singleton
     fun provideOkHttpClient(cache: Cache): OkHttpClient {
@@ -58,14 +83,19 @@ object NetworkModule {
 
         return OkHttpClient.Builder()
             .addInterceptor(logging)
-            // TODO: Другие интерцепторы (например, для аутентификации, кэширования) здесь же
+            // TODO: Другие интерцепторы (например, для аутентификации) здесь же
             .cache(cache)
             .build()
     }
 
-    // emulator : http://10.0.2.2:8080
-    // device : http://192.168.3.6:8080
-
+    /**
+     * Предоставляет экземпляр [Retrofit] для создания API сервисов.
+     * Использует базовый URL из [BuildConfig], [Gson] для конвертации JSON и [OkHttpClient] для выполнения запросов.
+     *
+     * @param gson Экземпляр [Gson], предоставленный [provideGson].
+     * @param okHttpClient Экземпляр [OkHttpClient], предоставленный [provideOkHttpClient].
+     * @return [Retrofit] - сконфигурированный клиент Retrofit.
+     */
     @Provides
     @Singleton
     fun provideRetrofit(gson: Gson, okHttpClient: OkHttpClient): Retrofit {
@@ -76,6 +106,13 @@ object NetworkModule {
             .build()
     }
 
+    /**
+     * Предоставляет реализацию интерфейса [OlympiadApiService] для взаимодействия с API олимпиад.
+     * Создается с помощью [Retrofit].
+     *
+     * @param retrofit Экземпляр [Retrofit], предоставленный [provideRetrofit].
+     * @return [OlympiadApiService] - API сервис для олимпиад.
+     */
     @Provides
     @Singleton
     fun provideOlympiadApiService(retrofit: Retrofit): OlympiadApiService {
