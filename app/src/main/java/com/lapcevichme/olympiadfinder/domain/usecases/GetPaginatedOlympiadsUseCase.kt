@@ -1,6 +1,5 @@
 package com.lapcevichme.olympiadfinder.domain.usecases
 
-import com.lapcevichme.olympiadfinder.data.di.MockOlympiadRepository
 import com.lapcevichme.olympiadfinder.domain.model.Olympiad
 import com.lapcevichme.olympiadfinder.domain.model.PaginatedResponse
 import com.lapcevichme.olympiadfinder.domain.model.Resource
@@ -18,7 +17,7 @@ class GetPaginatedOlympiadsUseCase @Inject constructor(
         selectedGrades: List<Int> = emptyList(),
         selectedSubjects: List<Long> = emptyList()
     ): Flow<Resource<PaginatedResponse<Olympiad>>> {
-        return olympiadRepository.getOlympiads(
+        return olympiadRepository.getPaginatedOlympiads(
             page,
             pageSize,
             query,

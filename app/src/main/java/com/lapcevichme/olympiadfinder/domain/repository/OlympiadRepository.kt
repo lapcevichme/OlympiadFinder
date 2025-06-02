@@ -8,7 +8,8 @@ import kotlinx.coroutines.flow.Flow
 
 interface OlympiadRepository {
     fun getAllOlympiads(): Flow<Result<List<Olympiad>>>
-    fun getOlympiads(
+    suspend fun getOlympiadById(id: Long): Resource<Olympiad>
+    fun getPaginatedOlympiads(
         page: Int,
         pageSize: Int,
         query: String?,

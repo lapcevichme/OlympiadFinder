@@ -18,7 +18,9 @@ class MockOlympiadRepositoryImpl @Inject constructor() : OlympiadRepository {
         Olympiad(
             id = i.toLong(),
             name = "Олимпиада $i",
-            subjects = listOf(Subject(0,"Предмет $i"), Subject(1,"Математика"), Subject(2,"Физика")),
+            subjects = listOf(
+                Subject(0, "Предмет $i"), Subject(1, "Математика"), Subject(2, "Физика")
+            ),
             minGrade = i % 5 + 1,
             maxGrade = 11,
             stages = listOf(
@@ -38,8 +40,17 @@ class MockOlympiadRepositoryImpl @Inject constructor() : OlympiadRepository {
         emit(Result.success(allOlympiads))
     }
 
+    override suspend fun getOlympiadById(id: Long): Resource<Olympiad> {
+        val olympiad = allOlympiads.find { it.id == id }
+        return if (olympiad != null) {
+            Resource.success(olympiad)
+        } else {
+            Resource.failure(Exception("Olympiad with ID $id not found in mock data"))
+        }
+    }
+
     // Функция для получения олимпиад с пагинацией
-    override fun getOlympiads(
+    override fun getPaginatedOlympiads(
         page: Int,
         pageSize: Int,
         query: String?,
@@ -54,12 +65,11 @@ class MockOlympiadRepositoryImpl @Inject constructor() : OlympiadRepository {
         if (!query.isNullOrBlank()) {
             val lowerCaseQuery = query.lowercase()
             currentFilteredList = currentFilteredList.filter { olympiad ->
-                olympiad.name.lowercase().contains(lowerCaseQuery) ||
-                        olympiad.description.orEmpty().lowercase().contains(lowerCaseQuery) ||
-                        olympiad.keywords.orEmpty().lowercase().contains(lowerCaseQuery) ||
-                        (olympiad.subjects ?: emptyList()).any { subject ->
-                            subject.name.lowercase().contains(lowerCaseQuery)
-                        }
+                olympiad.name.lowercase().contains(lowerCaseQuery) || olympiad.description.orEmpty()
+                    .lowercase().contains(lowerCaseQuery) || olympiad.keywords.orEmpty().lowercase()
+                    .contains(lowerCaseQuery) || (olympiad.subjects ?: emptyList()).any { subject ->
+                    subject.name.lowercase().contains(lowerCaseQuery)
+                }
             }
         }
 
@@ -98,8 +108,7 @@ class MockOlympiadRepositoryImpl @Inject constructor() : OlympiadRepository {
 
         // 4. Создаем PaginatedResponse с данными и метаданными ТЕКУЩЕГО ОТФИЛЬТРОВАННОГО списка
         val response = PaginatedResponse(
-            items = currentPageItems,
-            meta = PaginationMetadata(
+            items = currentPageItems, meta = PaginationMetadata(
                 totalItems = totalItems,
                 totalPages = totalPages,
                 currentPage = page,
@@ -113,10 +122,12 @@ class MockOlympiadRepositoryImpl @Inject constructor() : OlympiadRepository {
     }
 
     override suspend fun getAvailableSubjects(): Resource<List<Subject>> {
-        return Resource.success(listOf(
-            Subject(id = 1, name = "Математика"),
-            Subject(id = 2, name = "Физика"),
-            Subject(id = 3, name = "Информатика")
-        ))
+        return Resource.success(
+            listOf(
+                Subject(id = 1, name = "Математика"),
+                Subject(id = 2, name = "Физика"),
+                Subject(id = 3, name = "Информатика")
+            )
+        )
     }
 }
