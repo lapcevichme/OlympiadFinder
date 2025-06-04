@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.lapcevichme.olympiadfinder.domain.model.AppError
 import com.lapcevichme.olympiadfinder.domain.model.Resource
 import com.lapcevichme.olympiadfinder.domain.model.Subject
 import com.lapcevichme.olympiadfinder.ui.theme.PreviewTheme
@@ -33,8 +34,8 @@ fun FilterBottomSheetContent(
     onGradeSelected: (grade: Int, isSelected: Boolean) -> Unit,
     availableSubjects: Resource<List<Subject>>, // Доступные предметы из ViewModel
     selectedSubjects: List<Long>, // Выбранные предметы (их ID) из UI состояния
-    onSubjectSelected: (subjectId: Long, isSelected: Boolean) -> Unit,
-    onApplyFilters: () -> Unit, // Функция, вызываемая при нажатии кнопки "Применить"
+    onSubjectSelected: (subjectId: Long, isSelected: Boolean) -> Unit, // Коллбэк для выбора предмета
+    onApplyFilters: () -> Unit,
     onResetFilters: () -> Unit
 ) {
     Column(
@@ -81,6 +82,8 @@ fun FilterBottomSheetContent(
                 )
             }
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Раздел "Предметы"
 
@@ -130,8 +133,15 @@ fun FilterBottomSheetContent(
             }
             is Resource.Failure -> {
                 // Показываем сообщение об ошибке, если загрузка предметов не удалась
+                val errorMessage = when (availableSubjects.appError) {
+                    is AppError.NetworkError -> "Ошибка сети. Проверьте подключение к интернету."
+                    is AppError.ServerError -> "Ошибка сервера: ${availableSubjects.appError.message ?: "Что-то пошло не так на сервере."}"
+                    is AppError.DataError -> "Ошибка данных: ${availableSubjects.appError.message ?: "Некорректные данные."}"
+                    is AppError.NotFoundError -> "Предметы не найдены."
+                    is AppError.UnknownError -> "Неизвестная ошибка: ${availableSubjects.appError.message ?: "Попробуйте еще раз."}"
+                }
                 Text(
-                    "Не удалось загрузить предметы: ${availableSubjects.exception?.message ?: "Неизвестная ошибка"}",
+                    "Не удалось загрузить предметы: $errorMessage",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error
                 )

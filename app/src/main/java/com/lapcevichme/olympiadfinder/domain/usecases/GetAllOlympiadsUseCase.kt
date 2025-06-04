@@ -1,7 +1,7 @@
 package com.lapcevichme.olympiadfinder.domain.usecases
 
-import com.lapcevichme.olympiadfinder.data.di.MockOlympiadRepository
 import com.lapcevichme.olympiadfinder.domain.model.Olympiad
+import com.lapcevichme.olympiadfinder.domain.model.Resource
 import com.lapcevichme.olympiadfinder.domain.repository.OlympiadRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -13,5 +13,5 @@ import javax.inject.Inject
 class GetAllOlympiadsUseCase @Inject constructor(
     private val olympiadRepository: OlympiadRepository
 ) {
-    operator fun invoke(): Flow<Result<List<Olympiad>>> = olympiadRepository.getAllOlympiads()
+    operator fun invoke(): Flow<Resource<List<Olympiad>>> = olympiadRepository.getAllOlympiads()
 }

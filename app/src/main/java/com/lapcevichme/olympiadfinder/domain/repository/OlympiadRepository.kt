@@ -12,9 +12,9 @@ import kotlinx.coroutines.flow.Flow
  */
 interface OlympiadRepository {
     /**
-     * Получает [Flow] с [Result], содержащим список всех олимпиад.
+     * Получает [Flow] с [Resource], содержащим список всех олимпиад.
      */
-    fun getAllOlympiads(): Flow<Result<List<Olympiad>>>
+    fun getAllOlympiads(): Flow<Resource<List<Olympiad>>>
 
     /**
      * Получает [Resource], содержащий олимпиаду по ее уникальному [id].

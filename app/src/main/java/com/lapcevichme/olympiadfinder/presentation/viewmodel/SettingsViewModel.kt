@@ -3,7 +3,7 @@ package com.lapcevichme.olympiadfinder.presentation.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lapcevichme.olympiadfinder.data.local.DEFAULT_PAGE_SIZE
+import com.lapcevichme.olympiadfinder.data.local.PreferencesSettingsDataStore.Companion.DEFAULT_PAGE_SIZE
 import com.lapcevichme.olympiadfinder.domain.model.AppFont
 import com.lapcevichme.olympiadfinder.domain.model.Theme
 import com.lapcevichme.olympiadfinder.domain.usecases.settings.GetFontPreferenceUseCase

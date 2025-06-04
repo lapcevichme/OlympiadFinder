@@ -17,51 +17,48 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.lapcevichme.olympiadfinder.presentation.viewmodel.ErrorState
+import com.lapcevichme.olympiadfinder.domain.model.AppError
 import com.lapcevichme.olympiadfinder.ui.theme.PreviewTheme
 
+/**
+ * Компонент для отображения различных состояний ошибок в UI.
+ *
+ * @param error Состояние ошибки, которое необходимо отобразить. Может быть null, если ошибки нет.
+ * @param onRetryClicked Колбэк, вызываемый при нажатии кнопки "Повторить".
+ * @param modifier Модификатор для настройки контейнера ошибки.
+ */
 @Composable
 fun ErrorDisplay(
-    errorState: ErrorState, // Принимаем состояние ошибки
-    onRetryClicked: () -> Unit, // Принимаем колбэк для повтора
-    modifier: Modifier = Modifier // Модификатор для настройки контейнера ошибки
+    error: AppError?, // Теперь принимаем AppError?
+    onRetryClicked: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    when (errorState) {
-        is ErrorState.NoError -> {
-            // Если нет ошибки, этот компонент ничего не отображает сам по себе.
-        }
+    // Если ошибки нет, компонент ничего не отображает.
+    if (error == null) {
+        return
+    }
 
-        is ErrorState.NetworkError -> {
-            Column(
-                modifier = modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                // Цвет текста ошибки уже был MaterialTheme.colorScheme.error
+    Column(
+        modifier = modifier.padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        when (error) {
+            is AppError.NetworkError -> {
                 Text(
                     "Нет подключения к интернету.",
                     color = MaterialTheme.colorScheme.error,
                     textAlign = TextAlign.Center
                 )
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = onRetryClicked) { // Используем переданный колбэк
-                    Text("Повторить")
-                }
             }
-        }
 
-        is ErrorState.ServerError -> {
-            Column(
-                modifier = modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
+            is AppError.ServerError -> {
                 Text(
                     "Не удалось загрузить олимпиады.",
                     color = MaterialTheme.colorScheme.error,
                     textAlign = TextAlign.Center
                 )
-                errorState.message?.let {
+                error.message?.let {
                     Text(
                         "Детали: $it",
                         style = MaterialTheme.typography.bodySmall,
@@ -69,13 +66,37 @@ fun ErrorDisplay(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = onRetryClicked) { // Используем переданный колбэк
-                    Text("Повторить")
-                }
             }
+
+            is AppError.DataError -> {
+                Text(
+                    "Ошибка данных: ${error.message ?: "Некорректные данные."}",
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            is AppError.NotFoundError -> {
+                Text(
+                    "Ресурс не найден.",
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            is AppError.UnknownError -> {
+                Text(
+                    "Произошла неизвестная ошибка: ${error.message ?: "Пожалуйста, попробуйте снова."}",
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center
+                )
+            }
+            // TODO: Добавить другие ветки when для новых типов AppError
         }
-        // TODO: Добавить другие ветки when
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = onRetryClicked) {
+            Text("Повторить")
+        }
     }
 }
 
@@ -94,7 +115,7 @@ fun PreviewErrorDisplayNetwork() {
     PreviewTheme {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             ErrorDisplay(
-                errorState = ErrorState.NetworkError,
+                error = AppError.NetworkError,
                 onRetryClicked = {},
                 modifier = Modifier.fillMaxWidth()
             )
@@ -113,7 +134,7 @@ fun PreviewErrorDisplayServer() {
     PreviewTheme {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             ErrorDisplay(
-                errorState = ErrorState.ServerError("HTTP 500: Internal Server Error"),
+                error = AppError.ServerError("HTTP 500: Internal Server Error"),
                 onRetryClicked = {},
                 modifier = Modifier.fillMaxWidth()
             )

@@ -3,7 +3,8 @@ package com.lapcevichme.olympiadfinder.presentation.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lapcevichme.olympiadfinder.data.local.DEFAULT_PAGE_SIZE
+import com.lapcevichme.olympiadfinder.data.local.PreferencesSettingsDataStore.Companion.DEFAULT_PAGE_SIZE
+import com.lapcevichme.olympiadfinder.domain.model.AppError
 import com.lapcevichme.olympiadfinder.domain.model.Olympiad
 import com.lapcevichme.olympiadfinder.domain.model.PaginationMetadata
 import com.lapcevichme.olympiadfinder.domain.model.Resource
@@ -26,8 +27,6 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import retrofit2.HttpException
-import java.io.IOException
 import javax.inject.Inject
 
 /**
@@ -130,9 +129,9 @@ class OlympiadListViewModel @Inject constructor(
     private val _selectedSubjects = MutableStateFlow<List<Long>>(emptyList())
     val selectedSubjects: StateFlow<List<Long>> = _selectedSubjects
 
-    /** [StateFlow] для состояния ошибки, отображаемой в UI. */
-    private val _errorState = MutableStateFlow<ErrorState>(ErrorState.NoError)
-    val errorState: StateFlow<ErrorState> = _errorState
+    /** [StateFlow] для состояния ошибки, отображаемой в UI. Теперь хранит [AppError] или `null`. */
+    private val _errorState = MutableStateFlow<AppError?>(null)
+    val errorState: StateFlow<AppError?> = _errorState
 
     /** Хранит последние параметры загрузки для повтора в случае ошибки. */
     private var lastLoadParams: LoadParams? = null
@@ -343,7 +342,7 @@ class OlympiadListViewModel @Inject constructor(
             Log.d(TAG, "Inside loadData for page ${params.page}, query '${params.query}', grades ${params.selectedGrades}, subjects ${params.selectedSubjects}")
 
             _isLoading.value = true // Ставим true в начале загрузки
-            _errorState.value = ErrorState.NoError // Сбрасываем предыдущую ошибку
+            _errorState.value = null // Сбрасываем предыдущую ошибку
 
 
             getPaginatedOlympiadsUseCase(
@@ -366,12 +365,12 @@ class OlympiadListViewModel @Inject constructor(
                             _paginationMetadata.value = finalPaginatedResponse.meta
                             _displayedPage.value = finalPaginatedResponse.meta.currentPage
 
-                            _errorState.value = ErrorState.NoError // Очищаем состояние ошибки при успешной загрузке
+                            _errorState.value = null // Очищаем состояние ошибки при успешной загрузке
 
                             Log.i(TAG, "loadData success. Loaded ${finalPaginatedResponse.items.size} items for page ${finalPaginatedResponse.meta.currentPage}.")
                         },
-                        onFailure = { e -> // e - это Throwable из Resource.Failure
-                            Log.e(TAG, "loadData failure. Exception: ${e?.message}", e)
+                        onFailure = { appError -> // Теперь получаем AppError напрямую из репозитория
+                            Log.e(TAG, "loadData failure. AppError: $appError")
 
                             _olympiads.value = emptyList() // Очищаем список
                             _paginationMetadata.value = PaginationMetadata(
@@ -381,14 +380,7 @@ class OlympiadListViewModel @Inject constructor(
                                 pageSize = params.pageSize
                             )
 
-                            // Устанавливаем состояние ошибки в зависимости от типа исключения
-                            _errorState.value = when (e) {
-                                is IOException -> ErrorState.NetworkError // Ошибки ввода-вывода (сеть)
-                                is HttpException -> ErrorState.ServerError(e.message()) // Ошибки HTTP (сервер)
-                                is IllegalStateException -> ErrorState.ServerError(e.message) // Ошибка данных из репозитория
-                                else -> ErrorState.ServerError(e?.message ?: "Неизвестная ошибка загрузки") // Остальные ошибки
-                            }
-                            Log.w(TAG, "Displayed error state: ${_errorState.value}")
+                            _errorState.value = appError // Устанавливаем AppError напрямую
                         },
                         onLoading = {
                             Log.v(TAG, "loadData is in loading state.")
@@ -414,12 +406,11 @@ class OlympiadListViewModel @Inject constructor(
                 onSuccess = { subjects ->
                     Log.i(TAG, "Successfully loaded ${subjects.size} available subjects.")
                 },
-                onFailure = { e ->
-                    Log.e(TAG, "Failed to load available subjects: ${e?.message}", e)
-                    // Здесь можно решить, нужно ли устанавливать _errorState.value для общей ошибки экрана,
-                    // или достаточно просто показать пустое состояние/сообщение в BottomSheet.
-                    // Если это критично для всего экрана, то можно добавить:
-                    // _errorState.value = ErrorState.ServerError(e?.message ?: "Не удалось загрузить предметы")
+                onFailure = { appError -> // Получаем AppError напрямую из репозитория
+                    Log.e(TAG, "Failed to load available subjects: $appError")
+                    // Здесь можно установить _errorState.value, если ошибка загрузки предметов
+                    // должна влиять на общий экран, но для фильтров, возможно, достаточно
+                    // просто показать пустое состояние или сообщение об ошибке внутри листа.
                 },
                 onLoading = {
                     Log.v(TAG, "Available subjects are in loading state.")

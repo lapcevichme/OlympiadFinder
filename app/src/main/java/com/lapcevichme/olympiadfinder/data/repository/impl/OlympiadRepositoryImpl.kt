@@ -7,6 +7,7 @@ import com.lapcevichme.olympiadfinder.domain.model.Olympiad
 import com.lapcevichme.olympiadfinder.domain.model.PaginatedResponse
 import com.lapcevichme.olympiadfinder.domain.model.Resource
 import com.lapcevichme.olympiadfinder.domain.model.Subject
+import com.lapcevichme.olympiadfinder.domain.model.AppError
 import com.lapcevichme.olympiadfinder.domain.repository.OlympiadRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -31,44 +32,42 @@ class OlympiadRepositoryImpl @Inject constructor(
 
     /**
      * Получает список всех олимпиад из API.
-     * Возвращает [Flow] с [Result], который может содержать либо список [Olympiad] в случае успеха,
-     * либо [HttpException] в случае ошибки HTTP, либо [IOException] в случае сетевой ошибки,
-     * либо другое [Exception] в случае непредвиденной ошибки.
+     * Возвращает [Flow] с [Resource], который может содержать либо список [Olympiad] в случае успеха,
+     * либо [AppError] в случае ошибки.
      *
-     * @return [Flow] с [Result], содержащим список [Olympiad] или ошибку.
+     * @return [Flow] с [Resource], содержащим список [Olympiad] или ошибку.
      */
-    override fun getAllOlympiads(): Flow<Result<List<Olympiad>>> = flow {
+    override fun getAllOlympiads(): Flow<Resource<List<Olympiad>>> = flow {
         Log.d(TAG, "Fetching all olympiads...")
         try {
             val response = olympiadApiService.getAllOlympiads()
             if (response.isSuccessful) {
                 val networkOlympiads = response.body() ?: emptyList()
                 Log.i(TAG, "Successfully fetched ${networkOlympiads.size} all olympiads.")
-                emit(Result.success(networkOlympiads.map { it.toDomain() }))
+                emit(Resource.success(networkOlympiads.map { it.toDomain() }))
             } else {
                 Log.e(
                     TAG,
                     "Failed to fetch all olympiads: HTTP ${response.code()} - ${response.message()}"
                 )
-                emit(Result.failure(HttpException(response)))
+                emit(Resource.failure(AppError.fromThrowable(HttpException(response))))
             }
         } catch (e: IOException) {
             Log.e(TAG, "Network error during getAllOlympiads: ${e.message}", e)
-            emit(Result.failure(e))
+            emit(Resource.failure(AppError.fromThrowable(e)))
         } catch (e: Exception) {
             Log.e(TAG, "Unknown error during getAllOlympiads: ${e.message}", e)
-            emit(Result.failure(e))
+            emit(Resource.failure(AppError.fromThrowable(e)))
         }
     }.catch { e ->
-        Log.e(TAG, "Exception during getAllOlympiads Flow: ${e.message}", e)
-        emit(Result.failure(e))
+        Log.e(TAG, "Unhandled exception during getAllOlympiads Flow: ${e.message}", e)
+        emit(Resource.failure(AppError.fromThrowable(e)))
     }
 
     /**
      * Получает олимпиаду по ее уникальному идентификатору.
      * Возвращает [Resource], который может содержать либо объект [Olympiad] в случае успеха,
-     * либо [HttpException] в случае ошибки HTTP, либо [IOException] в случае сетевой ошибки,
-     * либо [IllegalStateException], если API вернул успешный ответ, но данные олимпиады были null.
+     * либо [AppError] в случае ошибки.
      *
      * @param id Уникальный идентификатор олимпиады.
      * @return [Resource], содержащий объект [Olympiad] или ошибку.
@@ -85,21 +84,21 @@ class OlympiadRepositoryImpl @Inject constructor(
                 } else {
                     val errorMessage = "API returned success but olympiad data was null for ID: $id"
                     Log.e(TAG, errorMessage)
-                    Resource.failure(IllegalStateException(errorMessage))
+                    Resource.failure(AppError.DataError(errorMessage))
                 }
             } else {
                 Log.e(
                     TAG,
                     "Failed to fetch olympiad by ID $id: HTTP ${response.code()} - ${response.message()}"
                 )
-                Resource.failure(HttpException(response))
+                Resource.failure(AppError.fromThrowable(HttpException(response)))
             }
         } catch (e: IOException) {
             Log.e(TAG, "Network error during getOlympiadById for ID $id: ${e.message}", e)
-            Resource.failure(e)
+            Resource.failure(AppError.fromThrowable(e))
         } catch (e: Exception) {
             Log.e(TAG, "Unknown error during getOlympiadById for ID $id: ${e.message}", e)
-            Resource.failure(e)
+            Resource.failure(AppError.fromThrowable(e))
         }
     }
 
@@ -108,9 +107,7 @@ class OlympiadRepositoryImpl @Inject constructor(
      * Получает пагинированный список олимпиад из API с возможностью фильтрации по странице,
      * размеру страницы, поисковому запросу, классам и предметам.
      * Возвращает [Flow] с [Resource], который может содержать [PaginatedResponse] с списком [Olympiad]
-     * и метаданными пагинации в случае успеха, либо [HttpException] в случае ошибки HTTP,
-     * либо [IOException] в случае сетевой ошибки, либо [IllegalStateException], если API вернул
-     * успешный ответ, но данные пагинации были null или неполными.
+     * и метаданными пагинации в случае успеха, либо [AppError] в случае ошибки.
      *
      * @param page Номер страницы для запроса.
      * @param pageSize Количество элементов на странице.
@@ -159,29 +156,28 @@ class OlympiadRepositoryImpl @Inject constructor(
                     val errorMessage =
                         "API returned success but data was null or incomplete for paginated olympiads."
                     Log.e(TAG, errorMessage)
-                    emit(Resource.failure(IllegalStateException(errorMessage)))
+                    emit(Resource.failure(AppError.DataError(errorMessage)))
                 }
             } else {
                 Log.e(
                     TAG,
                     "Failed to fetch paginated olympiads: HTTP ${response.code()} - ${response.message()}"
                 )
-                emit(Resource.failure(HttpException(response)))
+                emit(Resource.failure(AppError.fromThrowable(HttpException(response))))
             }
         } catch (e: IOException) {
             Log.e(TAG, "Network error during getPaginatedOlympiads: ${e.message}", e)
-            emit(Resource.failure(e))
+            emit(Resource.failure(AppError.fromThrowable(e)))
         } catch (e: Exception) {
             Log.e(TAG, "Unknown error during getPaginatedOlympiads: ${e.message}", e)
-            emit(Resource.failure(e))
+            emit(Resource.failure(AppError.fromThrowable(e)))
         }
     }
 
     /**
      * Получает список доступных предметов из API.
-     * Возвращает [Resource] с списком [Subject] в случае успеха, либо [HttpException]
-     * в случае ошибки HTTP, либо [IOException] в случае сетевой ошибки, либо
-     * [IllegalStateException], если API вернул успешный ответ, но данные о предметах были null.
+     * Возвращает [Resource] с списком [Subject] в случае успеха, либо [AppError]
+     * в случае ошибки.
      *
      * @return [Resource], содержащий список [Subject] или ошибку.
      */
@@ -197,21 +193,21 @@ class OlympiadRepositoryImpl @Inject constructor(
                 } else {
                     val errorMessage = "API returned success but subjects data was null."
                     Log.e(TAG, errorMessage)
-                    Resource.failure(IllegalStateException(errorMessage))
+                    Resource.failure(AppError.DataError(errorMessage))
                 }
             } else {
                 Log.e(
                     TAG,
                     "Failed to fetch available subjects: HTTP ${response.code()} - ${response.message()}"
                 )
-                Resource.failure(HttpException(response))
+                Resource.failure(AppError.fromThrowable(HttpException(response)))
             }
         } catch (e: IOException) {
             Log.e(TAG, "Network error during getAvailableSubjects: ${e.message}", e)
-            Resource.failure(e)
+            Resource.failure(AppError.fromThrowable(e))
         } catch (e: Exception) {
             Log.e(TAG, "Unknown error during getAvailableSubjects: ${e.message}", e)
-            Resource.failure(e)
+            Resource.failure(AppError.fromThrowable(e))
         }
     }
 }

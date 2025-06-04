@@ -6,6 +6,7 @@ import com.lapcevichme.olympiadfinder.domain.model.PaginationMetadata
 import com.lapcevichme.olympiadfinder.domain.model.Resource
 import com.lapcevichme.olympiadfinder.domain.model.Stage
 import com.lapcevichme.olympiadfinder.domain.model.Subject
+import com.lapcevichme.olympiadfinder.domain.model.AppError
 import com.lapcevichme.olympiadfinder.domain.repository.OlympiadRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -42,13 +43,13 @@ class MockOlympiadRepositoryImpl @Inject constructor() : OlympiadRepository {
     }
 
     /**
-     * Возвращает [Flow] с [Result], содержащим моковый список всех олимпиад.
+     * Возвращает [Flow] с [Resource], содержащим моковый список всех олимпиад.
      * Данные генерируются статически при инициализации мока.
      *
-     * @return [Flow] с [Result], содержащим список [Olympiad].
+     * @return [Flow] с [Resource], содержащим список [Olympiad].
      */
-    override fun getAllOlympiads(): Flow<Result<List<Olympiad>>> = flow {
-        emit(Result.success(allOlympiads))
+    override fun getAllOlympiads(): Flow<Resource<List<Olympiad>>> = flow {
+        emit(Resource.success(allOlympiads))
     }
 
     /**
@@ -63,7 +64,7 @@ class MockOlympiadRepositoryImpl @Inject constructor() : OlympiadRepository {
         return if (olympiad != null) {
             Resource.success(olympiad)
         } else {
-            Resource.failure(Exception("Olympiad with ID $id not found in mock data"))
+            Resource.failure(AppError.NotFoundError)
         }
     }
 
@@ -107,6 +108,13 @@ class MockOlympiadRepositoryImpl @Inject constructor() : OlympiadRepository {
                 }
             }
         }
+        // Добавление фильтрации по предметам в мок-репозитории
+        if (selectedSubjects.isNotEmpty()) {
+            currentFilteredList = currentFilteredList.filter { olympiad ->
+                olympiad.subjects?.any { subject -> selectedSubjects.contains(subject.id) } == true
+            }
+        }
+
         val totalItems = currentFilteredList.size
         val totalPages = (totalItems + pageSize - 1) / pageSize
         val startIndex = (page - 1) * pageSize
