@@ -22,60 +22,78 @@ import com.lapcevichme.olympiadfinder.presentation.navigation.AppDestinations.PR
 import com.lapcevichme.olympiadfinder.presentation.navigation.AppDestinations.SETTINGS_GRAPH_ROUTE
 import com.lapcevichme.olympiadfinder.ui.theme.PreviewTheme
 
+/**
+ * Composable-функция для отображения Bottom Navigation Bar.
+ * Отвечает за навигацию между основными секциями приложения (графами навигации).
+ *
+ * @param navController [NavController], используемый для выполнения навигационных действий.
+ */
 @Composable
 fun BottomNavigationBar(navController: NavController) {
+    // Отслеживает текущий элемент в Back Stack для определения активного маршрута.
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Определяем, какой граф сейчас активен (для подсветки Bottom Nav Item)
+    // Определяет, какой граф сейчас активен, для подсветки соответствующего элемента в Bottom Nav.
     val selectedRoute = when {
         currentRoute?.startsWith(HOME_GRAPH_ROUTE) == true -> HOME_GRAPH_ROUTE
         currentRoute?.startsWith(PROFILE_GRAPH_ROUTE) == true -> PROFILE_GRAPH_ROUTE
         currentRoute?.startsWith(SETTINGS_GRAPH_ROUTE) == true -> SETTINGS_GRAPH_ROUTE
-        else -> null // Ни один из известных графов Bottom Nav не активен
+        else -> null // Если ни один из известных графов Bottom Nav не активен
     }
 
-    // <-- Вызываем общую Composable для отображения контента -->
+    // Вызываем общую Composable для отображения контента Bottom Navigation Bar.
     BottomNavigationBarContent(selectedRoute = selectedRoute) { route ->
-        // Логика навигации для реального NavController
+        // Логика навигации для реального NavController:
+        // Переход на новый маршрут, если он отличается от текущего.
         if (currentRoute != route) {
-            // TODO: Убедитесь, что у вашего NavController есть startDestination
-            // и что findStartDestination() работает корректно в вашем графе навигации.
-            // В превью это может вызвать ошибку, так как нет реального графа.
-            // В реальном приложении эта логика навигации верна.
             navController.navigate(route, navOptions {
-
+                // popUpTo: Удаляет все экраны до стартовой точки текущего графа,
+                // чтобы избежать накопления Back Stack при переключении между табами.
+                // saveState = true: Сохраняет состояние экранов, удаленных из Back Stack,
+                // чтобы при повторном переходе на этот таб восстановить их состояние.
                 popUpTo(navController.graph.findStartDestination().id) {
                     saveState = true
                 }
-
+                // launchSingleTop: Если целевой экран уже находится в верхней части стека,
+                // он не будет запущен повторно; вместо этого будет использован существующий экземпляр.
                 launchSingleTop = true
+                // restoreState: Восстанавливает состояние экрана, если оно было сохранено ранее
+                // с помощью saveState = true.
                 restoreState = true
             })
         }
     }
 }
 
+/**
+ * Stateless Composable для отображения визуального контента Bottom Navigation Bar.
+ * Принимает выбранный маршрут и колбэк для обработки нажатий на элементы.
+ *
+ * @param selectedRoute Маршрут текущего выбранного элемента навигации (граф).
+ * @param onItemClick Лямбда, вызываемая при нажатии на элемент навигации,
+ * передающая маршрут выбранного элемента.
+ */
 @Composable
 private fun BottomNavigationBarContent(
     selectedRoute: String?, // Принимает выбранный маршрут
     onItemClick: (String) -> Unit // Принимает лямбду для обработки клика
 ) {
     NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest // Или surface, surfaceContainer, и т.д.
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest // Цвет фона навигационной панели
     ) {
         items.forEach { item ->
             NavigationBarItem(
                 icon = { Icon(imageVector = item.icon, contentDescription = item.name) },
                 label = { Text(text = item.name) },
-                selected = selectedRoute == item.route,
+                selected = selectedRoute == item.route, // Элемент выбран, если его маршрут совпадает с selectedRoute
                 onClick = { onItemClick(item.route) }, // Вызываем переданную лямбду при клике
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                    selectedTextColor = MaterialTheme.colorScheme.primary,
-                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    indicatorColor = MaterialTheme.colorScheme.secondaryContainer
+                    selectedIconColor = MaterialTheme.colorScheme.primary, // Цвет иконки выбранного элемента
+                    selectedTextColor = MaterialTheme.colorScheme.primary, // Цвет текста выбранного элемента
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant, // Цвет иконки невыбранного элемента
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant, // Цвет текста невыбранного элемента
+                    indicatorColor = MaterialTheme.colorScheme.secondaryContainer // Цвет индикатора выбранного элемента
                 )
             )
         }
