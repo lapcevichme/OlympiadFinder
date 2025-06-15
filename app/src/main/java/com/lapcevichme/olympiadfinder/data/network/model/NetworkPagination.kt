@@ -4,7 +4,8 @@ import com.google.gson.annotations.SerializedName
 import com.lapcevichme.olympiadfinder.domain.model.PaginationMetadata
 
 /**
- * Data class representing the network response for pagination metadata.
+ * Data-класс, представляющий сетевой ответ для метаданных пагинации.
+ * Используется для десериализации информации о пагинации из сетевых запросов.
  */
 data class NetworkPaginationMetadata(
     @SerializedName("total_items") val totalItems: Int,
@@ -14,7 +15,10 @@ data class NetworkPaginationMetadata(
 )
 
 /**
- * Data class representing a paginated network response containing a list of items and metadata.
+ * Data-класс, представляющий общий сетевой ответ с пагинацией.
+ * Содержит список элементов типа [T] и метаданные пагинации.
+ *
+ * @param T Тип элементов, содержащихся в ответе.
  */
 data class NetworkPaginatedResponse<T>(
     @SerializedName("items") val items: List<T>,
@@ -22,7 +26,9 @@ data class NetworkPaginatedResponse<T>(
 )
 
 /**
- * Extension function to map a [NetworkPaginationMetadata] to the domain model [PaginationMetadata].
+ * Расширяющая функция для преобразования [NetworkPaginationMetadata] в доменную модель [PaginationMetadata].
+ *
+ * @return Доменная модель [PaginationMetadata], представляющая данные пагинации.
  */
 fun NetworkPaginationMetadata.toDomain(): PaginationMetadata {
     return PaginationMetadata(

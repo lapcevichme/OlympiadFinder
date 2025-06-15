@@ -29,7 +29,7 @@ import com.lapcevichme.olympiadfinder.ui.theme.PreviewTheme
  */
 @Composable
 fun ErrorDisplay(
-    error: AppError?, // Теперь принимаем AppError?
+    error: AppError?,
     onRetryClicked: () -> Unit,
     modifier: Modifier = Modifier
 ) {

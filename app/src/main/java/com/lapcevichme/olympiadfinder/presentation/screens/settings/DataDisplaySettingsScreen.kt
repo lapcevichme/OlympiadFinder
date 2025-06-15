@@ -34,7 +34,6 @@ fun DataDisplaySettingsScreen(
 
     val pageSizeOptions = listOf(10, 20, 50)
 
-    // UI-логика вынесена в stateless Composable для превью
     DataDisplaySettingsScreenContent(
         currentPageSize = currentPageSize,
         pageSizeOptions = pageSizeOptions,

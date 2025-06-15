@@ -26,10 +26,8 @@ import com.lapcevichme.olympiadfinder.ui.theme.PreviewTheme
 
 @Composable
 fun SettingsHomeScreen(
-    navController: NavController,
-    viewModel: SettingsViewModel = hiltViewModel()
+    navController: NavController
 ) {
-    // UI-логика вынесена в stateless Composable для превью
     SettingsHomeScreenContent(
         onAppearanceClick = { navController.navigate(SETTINGS_APPEARANCE_SCREEN) },
         onDataDisplayClick = { navController.navigate(SETTINGS_DATA_DISPLAY_SCREEN) },
@@ -82,7 +80,7 @@ private fun SettingsHomeScreenContent(
         HorizontalDivider(
             modifier = Modifier.padding(vertical = 16.dp),
             color = MaterialTheme.colorScheme.outline
-        ) // Разделитель с цветом
+        )
 
         // --- Список категорий настроек для навигации ---
         Text(
@@ -105,7 +103,7 @@ private fun SettingsHomeScreenContent(
         HorizontalDivider(
             modifier = Modifier.padding(vertical = 16.dp),
             color = MaterialTheme.colorScheme.outline
-        ) // Разделитель с цветом
+        )
 
 
         // --- About Section (Оставляем на главном экране) ---

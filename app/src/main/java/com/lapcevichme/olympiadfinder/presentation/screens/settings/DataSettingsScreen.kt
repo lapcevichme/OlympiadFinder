@@ -24,7 +24,6 @@ fun DataSettingsScreen(
 ) {
     // На этом экране не нужно собирать много состояний, только вызывать clearCache()
 
-    // UI-логика вынесена в stateless Composable для превью
     DataSettingsScreenContent(
         onClearCacheClick = { viewModel.clearCache() }
     )
@@ -55,7 +54,7 @@ private fun DataSettingsScreenContent(
         )
         Spacer(modifier = Modifier.height(8.dp))
         Button(onClick = onClearCacheClick) {
-            Text("Очистить кэш") // Цвет текста кнопки берется из темы Button
+            Text("Очистить кэш")
         }
 
         // TODO: Добавить другие настройки данных, если есть

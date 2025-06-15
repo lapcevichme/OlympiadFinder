@@ -60,10 +60,6 @@ class MainActivity : ComponentActivity() {
                     Scaffold(
                         bottomBar = { BottomNavigationBar(navController = navController) }
                     ) { paddingValues ->
-                        /**
-                         * Компонент [AppNavGraph] определяет граф навигации приложения и отображает
-                         * текущий экран в зависимости от навигационного состояния.
-                         */
                         AppNavGraph(navController = navController, paddingValues = paddingValues)
                     }
                 }

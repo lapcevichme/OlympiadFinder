@@ -3,11 +3,11 @@ package com.lapcevichme.olympiadfinder.data.repository.impl
 import android.util.Log
 import com.lapcevichme.olympiadfinder.data.network.OlympiadApiService
 import com.lapcevichme.olympiadfinder.data.network.model.toDomain
+import com.lapcevichme.olympiadfinder.domain.model.AppError
 import com.lapcevichme.olympiadfinder.domain.model.Olympiad
 import com.lapcevichme.olympiadfinder.domain.model.PaginatedResponse
 import com.lapcevichme.olympiadfinder.domain.model.Resource
 import com.lapcevichme.olympiadfinder.domain.model.Subject
-import com.lapcevichme.olympiadfinder.domain.model.AppError
 import com.lapcevichme.olympiadfinder.domain.repository.OlympiadRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch

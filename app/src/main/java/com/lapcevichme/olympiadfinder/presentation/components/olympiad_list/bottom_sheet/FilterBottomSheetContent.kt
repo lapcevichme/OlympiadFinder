@@ -34,7 +34,7 @@ fun FilterBottomSheetContent(
     onGradeSelected: (grade: Int, isSelected: Boolean) -> Unit,
     availableSubjects: Resource<List<Subject>>, // Доступные предметы из ViewModel
     selectedSubjects: List<Long>, // Выбранные предметы (их ID) из UI состояния
-    onSubjectSelected: (subjectId: Long, isSelected: Boolean) -> Unit, // Коллбэк для выбора предмета
+    onSubjectSelected: (subjectId: Long, isSelected: Boolean) -> Unit,
     onApplyFilters: () -> Unit,
     onResetFilters: () -> Unit
 ) {
@@ -99,8 +99,13 @@ fun FilterBottomSheetContent(
             is Resource.Loading -> {
                 // Показываем индикатор загрузки, пока предметы грузятся
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
-                Text("Загрузка предметов...", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "Загрузка предметов...",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
+
             is Resource.Success -> {
                 val subjects = availableSubjects.data
                 if (subjects.isNotEmpty()) {
@@ -128,9 +133,14 @@ fun FilterBottomSheetContent(
                         }
                     }
                 } else {
-                    Text("Предметы не найдены.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        "Предметы не найдены.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
+
             is Resource.Failure -> {
                 // Показываем сообщение об ошибке, если загрузка предметов не удалась
                 val errorMessage = when (availableSubjects.appError) {
@@ -157,18 +167,18 @@ fun FilterBottomSheetContent(
         ) {
             OutlinedButton(
                 onClick = onResetFilters, // Вызываем функцию сброса UI состояния
-                modifier = Modifier.weight(1f) // Растягиваем кнопку
+                modifier = Modifier.weight(1f)
             ) {
                 Text("Сбросить", color = MaterialTheme.colorScheme.onSurface)
             }
             Button(
                 onClick = onApplyFilters, // Вызываем функцию применения фильтров (она также закроет лист)
-                modifier = Modifier.weight(1f) // Растягиваем кнопку
+                modifier = Modifier.weight(1f)
             ) {
                 Text("Применить", color = MaterialTheme.colorScheme.onPrimary)
             }
         }
-        Spacer(modifier = Modifier.height(16.dp)) // Отступ снизу
+        Spacer(modifier = Modifier.height(16.dp))
 
     }
 }
@@ -192,9 +202,17 @@ fun PreviewFilterBottomSheetContent_Default() {
             onGradeSelected = { _, _ -> },
             onApplyFilters = {},
             onResetFilters = {},
-            availableSubjects = TODO(),
-            selectedSubjects = TODO(),
-            onSubjectSelected = TODO()
+            availableSubjects = Resource.Success(
+                listOf(
+                    Subject(id = 1, name = "Математика"),
+                    Subject(id = 2, name = "Физика"),
+                    Subject(id = 3, name = "Информатика"),
+                    Subject(id = 4, name = "Биология"),
+                    Subject(id = 5, name = "Химия")
+                )
+            ),
+            selectedSubjects = listOf(2L, 4L), // Выбраны Физика и Биология
+            onSubjectSelected = { _, _ -> }
         )
     }
 }
@@ -207,16 +225,22 @@ fun PreviewFilterBottomSheetContent_Default() {
 )
 @Composable
 fun PreviewFilterBottomSheetContent_NoGradesSelected() {
-    PreviewTheme { // Оберни в тему
+    PreviewTheme {
         FilterBottomSheetContent(
             availableGrades = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
             selectedGrades = emptyList(),
             onGradeSelected = { _, _ -> },
             onApplyFilters = {},
             onResetFilters = {},
-            availableSubjects = TODO(),
-            selectedSubjects = TODO(),
-            onSubjectSelected = TODO()
+            availableSubjects = Resource.Success(
+                listOf(
+                    Subject(id = 1, name = "Математика"),
+                    Subject(id = 2, name = "Физика"),
+                    Subject(id = 3, name = "Информатика")
+                )
+            ),
+            selectedSubjects = emptyList(), // Ничего не выбрано
+            onSubjectSelected = { _, _ -> }
         )
     }
 }

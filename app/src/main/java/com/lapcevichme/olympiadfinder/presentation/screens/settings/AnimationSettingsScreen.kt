@@ -32,7 +32,6 @@ fun AnimationSettingsScreen(
     val animateListItems by viewModel.animateListItems.collectAsState()
     val animateThemeChanges by viewModel.animateThemeChanges.collectAsState()
 
-    // UI-логика вынесена в stateless Composable для превью
     AnimationSettingsScreenContent(
         animatePageTransitions = animatePageTransitions,
         animateListItems = animateListItems,

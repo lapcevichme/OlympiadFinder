@@ -69,7 +69,7 @@ fun PaginationPanel(
                                 slideOutVertically { height -> height } + fadeOut()
                     }.using(SizeTransform(clip = false))
                 } else {
-                    EnterTransition.None togetherWith ExitTransition.None // <-- Отключение анимации
+                    EnterTransition.None togetherWith ExitTransition.None // Отключение анимации
                 }
             },
             label = "PageNumberAnimation"

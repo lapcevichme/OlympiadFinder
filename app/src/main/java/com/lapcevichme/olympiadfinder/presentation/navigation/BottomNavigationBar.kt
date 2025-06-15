@@ -76,11 +76,11 @@ fun BottomNavigationBar(navController: NavController) {
  */
 @Composable
 private fun BottomNavigationBarContent(
-    selectedRoute: String?, // Принимает выбранный маршрут
-    onItemClick: (String) -> Unit // Принимает лямбду для обработки клика
+    selectedRoute: String?,
+    onItemClick: (String) -> Unit
 ) {
     NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest // Цвет фона навигационной панели
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
     ) {
         items.forEach { item ->
             NavigationBarItem(
@@ -89,11 +89,11 @@ private fun BottomNavigationBarContent(
                 selected = selectedRoute == item.route, // Элемент выбран, если его маршрут совпадает с selectedRoute
                 onClick = { onItemClick(item.route) }, // Вызываем переданную лямбду при клике
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.primary, // Цвет иконки выбранного элемента
-                    selectedTextColor = MaterialTheme.colorScheme.primary, // Цвет текста выбранного элемента
-                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant, // Цвет иконки невыбранного элемента
-                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant, // Цвет текста невыбранного элемента
-                    indicatorColor = MaterialTheme.colorScheme.secondaryContainer // Цвет индикатора выбранного элемента
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    indicatorColor = MaterialTheme.colorScheme.secondaryContainer
                 )
             )
         }

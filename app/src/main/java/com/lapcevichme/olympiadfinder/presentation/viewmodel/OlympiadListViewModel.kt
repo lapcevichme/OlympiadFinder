@@ -165,12 +165,22 @@ class OlympiadListViewModel @Inject constructor(
 
         // Наблюдаем за loadParamsFlow и вызываем loadData с новыми параметрами
         loadParamsFlow
-            .onEach { params -> Log.v(TAG, "loadParamsFlow emitted: $params") } // Подробный лог эмиссии параметров
+            .onEach { params ->
+                Log.v(
+                    TAG,
+                    "loadParamsFlow emitted: $params"
+                )
+            } // Подробный лог эмиссии параметров
 
             .onEach { params ->
                 lastLoadParams = params // Сохраняем параметры перед вызовом loadData
             }
-            .onEach { params -> Log.d(TAG, "Calling loadData with params: $params") } // Лог вызова loadData
+            .onEach { params ->
+                Log.d(
+                    TAG,
+                    "Calling loadData with params: $params"
+                )
+            } // Лог вызова loadData
             .onEach { params -> loadData(params) } // Вызываем loadData()
             .launchIn(viewModelScope)
 
@@ -203,7 +213,10 @@ class OlympiadListViewModel @Inject constructor(
             // Это изменение _currentPage автоматически увидит combine Flow и вызовет загрузку
             Log.d(TAG, "Page changed to: $newPage")
         } else {
-            Log.w(TAG, "Attempted to change to invalid page: $newPage. Current page: ${_currentPage.value}, Total pages: ${_paginationMetadata.value.totalPages}")
+            Log.w(
+                TAG,
+                "Attempted to change to invalid page: $newPage. Current page: ${_currentPage.value}, Total pages: ${_paginationMetadata.value.totalPages}"
+            )
         }
     }
 
@@ -218,7 +231,10 @@ class OlympiadListViewModel @Inject constructor(
             selectedGrades = _selectedGrades.value, // Копируем выбранные классы
             selectedSubjects = _selectedSubjects.value // Копируем выбранные предметы
         )
-        Log.d(TAG, "Filter sheet opened, UI state initialized with active filters: ${_filtersUiState.value}")
+        Log.d(
+            TAG,
+            "Filter sheet opened, UI state initialized with active filters: ${_filtersUiState.value}"
+        )
     }
 
     /**
@@ -235,8 +251,12 @@ class OlympiadListViewModel @Inject constructor(
         } else {
             currentSelected.remove(grade)
         }
-        _filtersUiState.value = _filtersUiState.value.copy(selectedGrades = currentSelected.sorted())
-        Log.v(TAG, "UI filter changed: grade $grade, selected $isSelected. Current UI selected grades: ${_filtersUiState.value.selectedGrades}")
+        _filtersUiState.value =
+            _filtersUiState.value.copy(selectedGrades = currentSelected.sorted())
+        Log.v(
+            TAG,
+            "UI filter changed: grade $grade, selected $isSelected. Current UI selected grades: ${_filtersUiState.value.selectedGrades}"
+        )
     }
 
     /**
@@ -253,8 +273,12 @@ class OlympiadListViewModel @Inject constructor(
         } else {
             currentSelected.remove(subjectId)
         }
-        _filtersUiState.value = _filtersUiState.value.copy(selectedSubjects = currentSelected.sorted())
-        Log.v(TAG, "UI filter changed: subject $subjectId, selected $isSelected. Current UI selected subjects: ${_filtersUiState.value.selectedSubjects}")
+        _filtersUiState.value =
+            _filtersUiState.value.copy(selectedSubjects = currentSelected.sorted())
+        Log.v(
+            TAG,
+            "UI filter changed: subject $subjectId, selected $isSelected. Current UI selected subjects: ${_filtersUiState.value.selectedSubjects}"
+        )
     }
 
     /**
@@ -262,7 +286,10 @@ class OlympiadListViewModel @Inject constructor(
      * Если фильтры изменились, сбрасывает пагинацию на первую страницу.
      */
     fun applyFilters() {
-        Log.d(TAG, "Apply filters button clicked. UI state: ${_filtersUiState.value}. Active state: Grades: ${_selectedGrades.value}, Subjects: ${_selectedSubjects.value}")
+        Log.d(
+            TAG,
+            "Apply filters button clicked. UI state: ${_filtersUiState.value}. Active state: Grades: ${_selectedGrades.value}, Subjects: ${_selectedSubjects.value}"
+        )
 
         val gradesChanged = _selectedGrades.value != _filtersUiState.value.selectedGrades
         val subjectsChanged = _selectedSubjects.value != _filtersUiState.value.selectedSubjects
@@ -272,11 +299,17 @@ class OlympiadListViewModel @Inject constructor(
 
         if (gradesChanged || subjectsChanged) {
             _currentPage.value = 1
-            Log.i(TAG, "Filters changed, resetting page to 1. New active filters: grades=${_selectedGrades.value}, subjects=${_selectedSubjects.value}")
+            Log.i(
+                TAG,
+                "Filters changed, resetting page to 1. New active filters: grades=${_selectedGrades.value}, subjects=${_selectedSubjects.value}"
+            )
         } else {
             Log.d(TAG, "Filters applied, no changes detected.")
         }
-        Log.d(TAG, "Filters applied. New active selected grades: ${_selectedGrades.value}. New active selected subjects: ${_selectedSubjects.value}. New active page: ${_currentPage.value}")
+        Log.d(
+            TAG,
+            "Filters applied. New active selected grades: ${_selectedGrades.value}. New active selected subjects: ${_selectedSubjects.value}. New active page: ${_currentPage.value}"
+        )
     }
 
     /**
@@ -292,7 +325,10 @@ class OlympiadListViewModel @Inject constructor(
      */
     fun discardFilterChanges() {
         openFilterSheet() // Возвращаем UI состояние к активным фильтрам
-        Log.d(TAG, "Filter UI changes discarded. Reverted UI state to active filters: ${_filtersUiState.value}")
+        Log.d(
+            TAG,
+            "Filter UI changes discarded. Reverted UI state to active filters: ${_filtersUiState.value}"
+        )
     }
 
     /**
@@ -306,7 +342,10 @@ class OlympiadListViewModel @Inject constructor(
         _filtersUiState.value = FilterUiState() // Сбрасываем UI состояние фильтров к дефолту
         _currentPage.value = 1 // Сбрасываем пагинацию на первую страницу
 
-        Log.i(TAG, "Filters reset and applied. Active selected grades: ${_selectedGrades.value}. Active selected subjects: ${_selectedSubjects.value}. Active page: ${_currentPage.value}")
+        Log.i(
+            TAG,
+            "Filters reset and applied. Active selected grades: ${_selectedGrades.value}. Active selected subjects: ${_selectedSubjects.value}. Active page: ${_currentPage.value}"
+        )
     }
 
     /**
@@ -330,7 +369,10 @@ class OlympiadListViewModel @Inject constructor(
         Log.d(TAG, "Retry button clicked. Attempting to reload last requested data.")
         lastLoadParams?.let { params ->
             loadData(params) // Перезапускаем Flow загрузки
-        } ?: Log.w(TAG, "lastLoadParams is null, cannot retry.") // Предупреждение, если нет параметров для повтора
+        } ?: Log.w(
+            TAG,
+            "lastLoadParams is null, cannot retry."
+        ) // Предупреждение, если нет параметров для повтора
     }
 
     /**
@@ -339,7 +381,10 @@ class OlympiadListViewModel @Inject constructor(
      */
     private fun loadData(params: LoadParams) {
         viewModelScope.launch {
-            Log.d(TAG, "Inside loadData for page ${params.page}, query '${params.query}', grades ${params.selectedGrades}, subjects ${params.selectedSubjects}")
+            Log.d(
+                TAG,
+                "Inside loadData for page ${params.page}, query '${params.query}', grades ${params.selectedGrades}, subjects ${params.selectedSubjects}"
+            )
 
             _isLoading.value = true // Ставим true в начале загрузки
             _errorState.value = null // Сбрасываем предыдущую ошибку
@@ -355,19 +400,27 @@ class OlympiadListViewModel @Inject constructor(
                 .onEach { result -> // result типа Resource<PaginatedResponse<Olympiad>>
                     Log.v(TAG, "loadData received result: $result")
 
-                    _isLoading.value = false // Снимаем индикатор загрузки (независимо от успеха/ошибки)
+                    _isLoading.value =
+                        false // Снимаем индикатор загрузки (независимо от успеха/ошибки)
 
                     result.fold( // Используем fold для обработки Resource
                         onSuccess = { finalPaginatedResponse -> // finalPaginatedResponse - это PaginatedResponse<Olympiad> из Resource.Success
-                            Log.i(TAG, "loadData success. Processing response for page ${finalPaginatedResponse.meta.currentPage}.")
+                            Log.i(
+                                TAG,
+                                "loadData success. Processing response for page ${finalPaginatedResponse.meta.currentPage}."
+                            )
 
                             _olympiads.value = finalPaginatedResponse.items
                             _paginationMetadata.value = finalPaginatedResponse.meta
                             _displayedPage.value = finalPaginatedResponse.meta.currentPage
 
-                            _errorState.value = null // Очищаем состояние ошибки при успешной загрузке
+                            _errorState.value =
+                                null // Очищаем состояние ошибки при успешной загрузке
 
-                            Log.i(TAG, "loadData success. Loaded ${finalPaginatedResponse.items.size} items for page ${finalPaginatedResponse.meta.currentPage}.")
+                            Log.i(
+                                TAG,
+                                "loadData success. Loaded ${finalPaginatedResponse.items.size} items for page ${finalPaginatedResponse.meta.currentPage}."
+                            )
                         },
                         onFailure = { appError -> // Теперь получаем AppError напрямую из репозитория
                             Log.e(TAG, "loadData failure. AppError: $appError")

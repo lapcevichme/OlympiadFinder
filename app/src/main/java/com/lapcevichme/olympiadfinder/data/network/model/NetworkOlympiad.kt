@@ -4,7 +4,8 @@ import com.google.gson.annotations.SerializedName
 import com.lapcevichme.olympiadfinder.domain.model.Olympiad
 
 /**
- * Data class representing the network response for an Olympiad.
+ * Data-класс, представляющий сетевой ответ для сущности [Olympiad].
+ * Используется для десериализации данных об олимпиаде из сетевых запросов.
  */
 data class NetworkOlympiad(
     val id: Long,
@@ -19,7 +20,10 @@ data class NetworkOlympiad(
 )
 
 /**
- * Extension function to map a [NetworkOlympiad] to the domain model [Olympiad].
+ * Расширяющая функция для преобразования [NetworkOlympiad] в доменную модель [Olympiad].
+ * Производит маппинг полей, включая преобразование вложенных списков.
+ *
+ * @return Доменная модель [Olympiad], представляющая данную сетевую сущность.
  */
 fun NetworkOlympiad.toDomain(): Olympiad {
     return Olympiad(

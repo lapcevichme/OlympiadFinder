@@ -26,7 +26,6 @@ sealed class Resource<out T> {
     companion object {
         fun <T> loading(): Resource<T> = Loading
         fun <T> success(data: T): Resource<T> = Success(data)
-        // Теперь Failure принимает AppError
         fun failure(appError: AppError): Resource<Nothing> = Failure(appError)
     }
 

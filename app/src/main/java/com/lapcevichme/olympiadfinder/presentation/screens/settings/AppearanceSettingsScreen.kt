@@ -36,7 +36,6 @@ fun AppearanceSettingsScreen(
 
     val fontOptions = AppFont.entries.toList()
 
-    // UI-логика вынесена в stateless Composable для превью
     AppearanceSettingsScreenContent(
         currentTheme = currentTheme,
         currentFont = currentFont,
@@ -77,17 +76,17 @@ private fun AppearanceSettingsScreenContent(
             ThemeRadioButton(
                 text = "Светлая",
                 selected = currentTheme == Theme.LIGHT,
-                onClick = { onThemeSelected(Theme.LIGHT) } // Используем переданный колбэк
+                onClick = { onThemeSelected(Theme.LIGHT) }
             )
             ThemeRadioButton(
                 text = "Темная",
                 selected = currentTheme == Theme.DARK,
-                onClick = { onThemeSelected(Theme.DARK) } // Используем переданный колбэк
+                onClick = { onThemeSelected(Theme.DARK) }
             )
             ThemeRadioButton(
                 text = "Системная",
                 selected = currentTheme == Theme.SYSTEM,
-                onClick = { onThemeSelected(Theme.SYSTEM) } // Используем переданный колбэк
+                onClick = { onThemeSelected(Theme.SYSTEM) }
             )
         }
 
@@ -108,7 +107,7 @@ private fun AppearanceSettingsScreenContent(
                         AppFont.MONOSPACE -> "Моноширинный (Monospace)"
                     },
                     selected = currentFont == fontOption,
-                    onClick = { onFontSelected(fontOption) } // Используем переданный колбэк
+                    onClick = { onFontSelected(fontOption) }
                 )
             }
         }

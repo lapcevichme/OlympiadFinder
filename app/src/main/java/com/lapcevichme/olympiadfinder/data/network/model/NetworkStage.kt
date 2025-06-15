@@ -6,7 +6,8 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 /**
- * Data class representing the network response for a Stage of an Olympiad.
+ * Data-класс, представляющий сетевой ответ для этапа олимпиады.
+ * Используется для десериализации данных об этапах из сетевых запросов.
  */
 data class NetworkStage(
     val name: String,
@@ -15,7 +16,10 @@ data class NetworkStage(
 )
 
 /**
- * Extension function to map a [NetworkStage] to the domain model [Stage].
+ * Расширяющая функция для преобразования [NetworkStage] в доменную модель [Stage].
+ * Производит парсинг строковых дат в объекты [LocalDate], обрабатывая возможные ошибки парсинга.
+ *
+ * @return Доменная модель [Stage], представляющая данный сетевой этап.
  */
 fun NetworkStage.toDomain(): Stage {
     val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE

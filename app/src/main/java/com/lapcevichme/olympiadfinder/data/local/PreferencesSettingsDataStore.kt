@@ -1,9 +1,10 @@
 package com.lapcevichme.olympiadfinder.data.local
 
 import android.content.Context
+import android.util.Log
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -13,7 +14,6 @@ import com.lapcevichme.olympiadfinder.domain.model.Theme
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import android.util.Log
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -27,6 +27,7 @@ class PreferencesSettingsDataStore @Inject constructor(@ApplicationContext priva
     companion object {
         private const val TAG = "PreferencesDataStore"
         private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
+
         /**
          * Значение по умолчанию для размера страницы, используемое при первом запуске или отсутствии настройки.
          */

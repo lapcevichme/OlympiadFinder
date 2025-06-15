@@ -62,8 +62,8 @@ fun OlympiadItem(
         interactionSource = interactionSource,
         shape = MaterialTheme.shapes.medium,
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 1.dp, // Базовое возвышение
-            pressedElevation = 4.dp // Возвышение при нажатии
+            defaultElevation = 1.dp,
+            pressedElevation = 4.dp
         )
     ) {
         Column(
@@ -148,7 +148,7 @@ fun OlympiadItemPreview() {
             olympiad = Olympiad(
                 id = 1L,
                 name = "Математика Плюс",
-                subjects = listOf(Subject(0,"Математика"), Subject(1,"Логика")),
+                subjects = listOf(Subject(0, "Математика"), Subject(1, "Логика")),
                 minGrade = 7,
                 maxGrade = 11,
                 stages = listOf(
@@ -178,7 +178,7 @@ fun OlympiadItemShortPreview() {
             olympiad = Olympiad(
                 id = 2L,
                 name = "Русский Медвежонок",
-                subjects = listOf(Subject(0,"Русский язык")),
+                subjects = listOf(Subject(0, "Русский язык")),
                 minGrade = 1,
                 maxGrade = 11,
                 stages = listOf(
@@ -207,7 +207,7 @@ fun OlympiadItemNoGradesPreview() {
             olympiad = Olympiad(
                 id = 3L,
                 name = "Олимпиада без указания классов",
-                subjects = listOf(Subject(0,"Разные")),
+                subjects = listOf(Subject(0, "Разные")),
                 minGrade = null,
                 maxGrade = null,
                 stages = listOf(

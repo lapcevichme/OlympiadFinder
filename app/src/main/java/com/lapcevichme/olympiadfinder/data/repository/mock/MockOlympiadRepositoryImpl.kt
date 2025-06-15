@@ -1,12 +1,12 @@
 package com.lapcevichme.olympiadfinder.data.repository.mock
 
+import com.lapcevichme.olympiadfinder.domain.model.AppError
 import com.lapcevichme.olympiadfinder.domain.model.Olympiad
 import com.lapcevichme.olympiadfinder.domain.model.PaginatedResponse
 import com.lapcevichme.olympiadfinder.domain.model.PaginationMetadata
 import com.lapcevichme.olympiadfinder.domain.model.Resource
 import com.lapcevichme.olympiadfinder.domain.model.Stage
 import com.lapcevichme.olympiadfinder.domain.model.Subject
-import com.lapcevichme.olympiadfinder.domain.model.AppError
 import com.lapcevichme.olympiadfinder.domain.repository.OlympiadRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow

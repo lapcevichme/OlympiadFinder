@@ -156,7 +156,7 @@ fun OlympiadDetailsSheetContent(olympiad: Olympiad, onClose: () -> Unit) {
 )
 @Composable
 fun PreviewOlympiadDetailsSheetContent_FullData() {
-    PreviewTheme { // Используем обертку с параметрами по умолчанию
+    PreviewTheme {
         val sampleOlympiad = Olympiad(
             id = 1,
             name = "Всероссийская олимпиада школьников по информатике (ВсОШ)",
@@ -166,13 +166,13 @@ fun PreviewOlympiadDetailsSheetContent_FullData() {
             subjects = listOf(
                 Subject(0, name = "Информатика"),
                 Subject(1, name = "Программирование")
-            ), // Используем твою модель Subject
+            ),
             stages = listOf(
                 Stage(name = "Школьный", startDate = null, endDate = null),
                 Stage(name = "Муниципальный", startDate = null, endDate = null),
                 Stage(name = "Региональный", startDate = null, endDate = null),
                 Stage(name = "Заключительный", startDate = null, endDate = null)
-            ), // Используем твою модель Stage
+            ),
             link = "[https://vserosolymp.ru/about/inf](https://vserosolymp.ru/about/inf)",
             keywords = "ВсОШ, информатика, программирование, школьники"
         )
@@ -188,7 +188,7 @@ fun PreviewOlympiadDetailsSheetContent_FullData() {
 )
 @Composable
 fun PreviewOlympiadDetailsSheetContent_MinimalData() {
-    PreviewTheme { // Используем обертку с параметрами по умолчанию
+    PreviewTheme {
         val sampleOlympiad = Olympiad(
             id = 2,
             name = "Простая олимпиада",

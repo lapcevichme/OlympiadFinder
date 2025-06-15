@@ -65,7 +65,6 @@ import com.lapcevichme.olympiadfinder.presentation.components.olympiad_list.Olym
 import com.lapcevichme.olympiadfinder.presentation.components.olympiad_list.PaginationPanel
 import com.lapcevichme.olympiadfinder.presentation.components.olympiad_list.bottom_sheet.FilterBottomSheetContent
 import com.lapcevichme.olympiadfinder.presentation.components.olympiad_list.bottom_sheet.OlympiadDetailsSheetContent
-import com.lapcevichme.olympiadfinder.presentation.viewmodel.FilterUiState
 import com.lapcevichme.olympiadfinder.presentation.viewmodel.OlympiadListViewModel
 import com.lapcevichme.olympiadfinder.ui.theme.PreviewTheme
 import kotlinx.coroutines.launch
@@ -128,7 +127,6 @@ fun OlympiadListScreen(
         }
     }
 
-    // Основной контент экрана вынесен в отдельную Composable
     OlympiadListScreenContent(
         olympiads = olympiads,
         currentPage = currentPage,
@@ -191,9 +189,9 @@ fun OlympiadListScreen(
                             isSelected
                         ) // Обновляет СОСТОЯНИЕ UI ЛИСТА
                     },
-                    availableSubjects = availableSubjects, // <-- ПЕРЕДАЕМ ДОСТУПНЫЕ ПРЕДМЕТЫ -->
-                    selectedSubjects = filtersUiState.selectedSubjects, // <-- ПЕРЕДАЕМ ВЫБРАННЫЕ ПРЕДМЕТЫ ИЗ UI СОСТОЯНИЯ -->
-                    onSubjectSelected = { subjectId, isSelected -> // <-- ПЕРЕДАЕМ КОЛЛБЭК ДЛЯ ВЫБОРА ПРЕДМЕТА -->
+                    availableSubjects = availableSubjects,
+                    selectedSubjects = filtersUiState.selectedSubjects,
+                    onSubjectSelected = { subjectId, isSelected ->
                         viewModel.onSubjectFilterUiChanged(
                             subjectId,
                             isSelected
@@ -243,7 +241,7 @@ private fun OlympiadListScreenContent(
     searchQuery: String,
     animatePageTransitions: Boolean,
     animateListItems: Boolean,
-    listState: LazyListState, // Принимаем состояние списка
+    listState: LazyListState,
     onSearchQueryChanged: (String) -> Unit,
     onFilterIconClick: () -> Unit,
     onPageChanged: (Int) -> Unit,
@@ -253,26 +251,26 @@ private fun OlympiadListScreenContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background) // Устанавливаем фон экрана из темы
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // Search Bar Row
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface) // Фон строки поиска
+                .background(MaterialTheme.colorScheme.surface)
                 .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Поле ввода поискового запроса
             OutlinedTextField(
                 value = searchQuery,
-                onValueChange = onSearchQueryChanged, // Используем переданный колбэк
+                onValueChange = onSearchQueryChanged,
                 label = {
                     Text(
                         "Поиск олимпиад...",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                }, // Цвет метки
+                },
                 singleLine = true,
                 leadingIcon = {
                     Icon(
@@ -280,15 +278,15 @@ private fun OlympiadListScreenContent(
                         contentDescription = "Иконка поиска",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                }, // Цвет иконки
+                },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { onSearchQueryChanged("") }) { // Используем переданный колбэк
+                        IconButton(onClick = { onSearchQueryChanged("") }) {
                             Icon(
                                 Icons.Default.Close,
                                 contentDescription = "Очистить поиск",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            ) // Цвет иконки
+                            )
                         }
                     }
                 },
@@ -307,11 +305,11 @@ private fun OlympiadListScreenContent(
                     unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     // ... другие цвета при необходимости
                 ),
-                modifier = Modifier.weight(1f) // Занимает все доступное место, кроме кнопки фильтров
+                modifier = Modifier.weight(1f)
             )
 
             // Кнопка фильтров
-            IconButton(onClick = onFilterIconClick) { // Используем переданный колбэк
+            IconButton(onClick = onFilterIconClick) {
                 Icon(
                     Icons.Default.Menu,
                     contentDescription = "Фильтры",
@@ -324,10 +322,10 @@ private fun OlympiadListScreenContent(
 
             // Отображаем контент при УСПЕХЕ (список, пустое состояние, загрузка в пустой список)
             // Этот блок активен ТОЛЬКО если нет активной ошибки
-            if (error == null) { // Изменено: проверяем, что error == null
+            if (error == null) {
                 // Используем AnimatedContent для анимации смены страниц, если данные загружены успешно
                 AnimatedContent(
-                    targetState = currentPage, // <-- Анимируем по НОМЕРУ ТЕКУЩЕЙ страницы
+                    targetState = currentPage, // Анимируем по НОМЕРУ ТЕКУЩЕЙ страницы
                     modifier = Modifier.fillMaxSize(),
                     transitionSpec = {
                         if (animatePageTransitions) {
@@ -355,19 +353,19 @@ private fun OlympiadListScreenContent(
                         when {
                             // Индикатор загрузки при пустом списке (при первом запуске или сбросе)
                             // Показываем его, только если список пуст Идет загрузка И нет ошибки
-                            isLoading && olympiads.isEmpty() -> { // error == null уже проверено выше
+                            isLoading && olympiads.isEmpty() -> {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .weight(1f),
                                     contentAlignment = Alignment.Center
-                                ) { CircularProgressIndicator(color = MaterialTheme.colorScheme.primary) } // Цвет индикатора
+                                ) { CircularProgressIndicator(color = MaterialTheme.colorScheme.primary) }
                             }
 
                             olympiads.isNotEmpty() -> {
                                 LazyColumn(
                                     contentPadding = PaddingValues(all = 8.dp),
-                                    state = listState, // Используем переданное состояние списка
+                                    state = listState,
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     items(
@@ -384,6 +382,7 @@ private fun OlympiadListScreenContent(
                                             ) else Modifier
                                              */
                                             // При добавлении animateItem периодически ломается LazyColumn
+                                            // FIXME!!
                                         )
                                     }
                                 }
@@ -393,12 +392,12 @@ private fun OlympiadListScreenContent(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(horizontal = 8.dp),
-                                        color = MaterialTheme.colorScheme.primary // Цвет индикатора
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                 }
                             }
                             // Если список пуст И нет ошибки (и не идет загрузка в пустой список)
-                            else -> { // olympiads.isEmpty() && !isLoading // error == null уже проверено выше
+                            else -> {
                                 // Сообщение о пустом списке (если нет ошибки и ничего не найдено)
                                 Box(
                                     modifier = Modifier
@@ -419,10 +418,9 @@ private fun OlympiadListScreenContent(
             }
 
             // Отображаем компонент ErrorDisplay ТОЛЬКО если есть ошибка
-            // Этот блок активен ТОЛЬКО если error НЕ null
-            if (error != null) { // Изменено: проверяем, что error НЕ null
-                ErrorDisplay( // Используем универсальный компонент ErrorDisplay
-                    error = error, // Передаем текущее состояние ошибки (AppError?)
+            if (error != null) {
+                ErrorDisplay(
+                    error = error,
                     onRetryClicked = onRetryClicked,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -483,15 +481,15 @@ private val samplePaginationMetadata = PaginationMetadata(
 fun PreviewOlympiadListScreen_LoadingEmpty() {
     PreviewTheme {
         OlympiadListScreenContent(
-            olympiads = emptyList(), // Пустой список
+            olympiads = emptyList(),
             currentPage = 1,
             totalPages = samplePaginationMetadata.totalPages,
-            isLoading = true, // Идет загрузка
-            error = null, // Нет ошибки
+            isLoading = true,
+            error = null,
             searchQuery = "",
             animatePageTransitions = true,
             animateListItems = true,
-            listState = rememberLazyListState(), // Мок состояния списка
+            listState = rememberLazyListState(),
             onSearchQueryChanged = {},
             onFilterIconClick = {},
             onPageChanged = {},
@@ -512,15 +510,15 @@ fun PreviewOlympiadListScreen_LoadingEmpty() {
 fun PreviewOlympiadListScreen_LoadingNextPage() {
     PreviewTheme {
         OlympiadListScreenContent(
-            olympiads = sampleOlympiads, // Список не пуст
+            olympiads = sampleOlympiads,
             currentPage = 1,
             totalPages = samplePaginationMetadata.totalPages,
-            isLoading = true, // Идет загрузка
-            error = null, // Нет ошибки
+            isLoading = true,
+            error = null,
             searchQuery = "",
             animatePageTransitions = true,
             animateListItems = true,
-            listState = rememberLazyListState(), // Мок состояния списка
+            listState = rememberLazyListState(),
             onSearchQueryChanged = {},
             onFilterIconClick = {},
             onPageChanged = {},
@@ -542,14 +540,12 @@ fun PreviewOlympiadListScreen_LoadingNextPage() {
 fun PreviewOlympiadListScreen_LoadedDataPage1() {
     PreviewTheme {
         OlympiadListScreenContent(
-            olympiads = sampleOlympiads, // Список с данными
-
+            olympiads = sampleOlympiads,
             currentPage = 1,
             totalPages = samplePaginationMetadata.totalPages,
-            isLoading = false, // Загрузка завершена
-            error = null, // Нет ошибки
+            isLoading = false,
+            error = null,
             searchQuery = "",
-
             animatePageTransitions = true,
             animateListItems = true,
             listState = rememberLazyListState(),
@@ -559,7 +555,7 @@ fun PreviewOlympiadListScreen_LoadedDataPage1() {
             onOlympiadClick = {},
             onRetryClicked = {},
 
-        )
+            )
     }
 }
 
@@ -574,14 +570,12 @@ fun PreviewOlympiadListScreen_LoadedDataPage1() {
 fun PreviewOlympiadListScreen_LoadedDataMiddlePage() {
     PreviewTheme {
         OlympiadListScreenContent(
-            olympiads = sampleOlympiads, // Список с данными
-
+            olympiads = sampleOlympiads,
             currentPage = 3,
             totalPages = samplePaginationMetadata.totalPages,
-            isLoading = false, // Загрузка завершена
-            error = null, // Нет ошибки
+            isLoading = false,
+            error = null,
             searchQuery = "",
-
             animatePageTransitions = true,
             animateListItems = true,
             listState = rememberLazyListState(),
@@ -590,8 +584,7 @@ fun PreviewOlympiadListScreen_LoadedDataMiddlePage() {
             onPageChanged = {},
             onOlympiadClick = {},
             onRetryClicked = {},
-
-        )
+            )
     }
 }
 
@@ -607,12 +600,12 @@ fun PreviewOlympiadListScreen_LoadedDataMiddlePage() {
 fun PreviewOlympiadListScreen_LoadedEmptyNoSearchFilters() {
     PreviewTheme {
         OlympiadListScreenContent(
-            olympiads = emptyList(), // Пустой список
+            olympiads = emptyList(),
             currentPage = 1,
-            totalPages = 0, // Нет страниц
-            isLoading = false, // Загрузка завершена
-            error = null, // Нет ошибки
-            searchQuery = "", // Нет поиска
+            totalPages = 0,
+            isLoading = false,
+            error = null,
+            searchQuery = "",
             animatePageTransitions = true,
             animateListItems = true,
             listState = rememberLazyListState(),
@@ -636,12 +629,12 @@ fun PreviewOlympiadListScreen_LoadedEmptyNoSearchFilters() {
 fun PreviewOlympiadListScreen_LoadedEmptyWithSearchFilters() {
     PreviewTheme {
         OlympiadListScreenContent(
-            olympiads = emptyList(), // Пустой список
+            olympiads = emptyList(),
             currentPage = 1,
-            totalPages = 0, // Нет страниц
-            isLoading = false, // Загрузка завершена
-            error = null, // Нет ошибки
-            searchQuery = "Математика", // Активный поиск
+            totalPages = 0,
+            isLoading = false,
+            error = null,
+            searchQuery = "Математика",
             animatePageTransitions = true,
             animateListItems = true,
             listState = rememberLazyListState(),
@@ -666,11 +659,11 @@ fun PreviewOlympiadListScreen_LoadedEmptyWithSearchFilters() {
 fun PreviewOlympiadListScreen_NetworkError() {
     PreviewTheme {
         OlympiadListScreenContent(
-            olympiads = emptyList(), // Список может быть пустым или нет, но ошибка перекрывает
+            olympiads = emptyList(),
             currentPage = 1,
             totalPages = samplePaginationMetadata.totalPages,
-            isLoading = false, // Загрузка, возможно, завершилась ошибкой
-            error = null, // Сетевая ошибка
+            isLoading = false,
+            error = null,
             searchQuery = "",
             animatePageTransitions = true,
             animateListItems = true,
@@ -695,7 +688,7 @@ fun PreviewOlympiadListScreen_NetworkError() {
 fun PreviewOlympiadListScreen_ServerErrorWithMessage() {
     PreviewTheme {
         OlympiadListScreenContent(
-            olympiads = emptyList(), // Список может быть пустым или нет
+            olympiads = emptyList(),
             currentPage = 1,
             totalPages = samplePaginationMetadata.totalPages,
             isLoading = false,
@@ -724,7 +717,7 @@ fun PreviewOlympiadListScreen_ServerErrorWithMessage() {
 fun PreviewOlympiadListScreen_ServerErrorNoMessage() {
     PreviewTheme {
         OlympiadListScreenContent(
-            olympiads = emptyList(), // Список может быть пустым или нет
+            olympiads = emptyList(),
             currentPage = 1,
             totalPages = samplePaginationMetadata.totalPages,
             isLoading = false,
