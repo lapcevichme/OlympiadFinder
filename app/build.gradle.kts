@@ -87,7 +87,6 @@ dependencies {
     implementation(libs.retrofit.core)
     implementation(libs.retrofit.converter.gson)
     implementation(libs.gson)
-    implementation(libs.moshi.adapters)
     implementation(libs.okhttp.core)
     implementation(libs.okhttp.logging.interceptor)
 }
