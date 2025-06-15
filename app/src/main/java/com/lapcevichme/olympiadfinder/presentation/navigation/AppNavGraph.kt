@@ -91,8 +91,7 @@ fun AppNavGraph(navController: NavHostController, paddingValues: PaddingValues) 
         ) {
             // Главный экран настроек (список категорий настроек)
             composable(route = SETTINGS_HOME_SCREEN) {
-                val settingsViewModel: SettingsViewModel = hiltViewModel()
-                SettingsHomeScreen(navController = navController, viewModel = settingsViewModel)
+                SettingsHomeScreen(navController = navController)
             }
 
             // Экраны внутри Settings Graph:
