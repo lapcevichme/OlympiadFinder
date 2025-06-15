@@ -132,13 +132,13 @@ class OlympiadRepositoryImpl @Inject constructor(
                 page = page,
                 pageSize = pageSize,
                 query = query,
-                grade = if (selectedGrades.isEmpty()) null else selectedGrades,
-                subject = if (selectedSubjects.isEmpty()) null else selectedSubjects
+                grade = selectedGrades.ifEmpty { null },
+                subject = selectedSubjects.ifEmpty { null }
             )
 
             if (response.isSuccessful) {
                 val networkResponse = response.body()
-                if (networkResponse != null && networkResponse.items != null && networkResponse.meta != null) {
+                if (networkResponse?.items != null) {
                     val domainItems = networkResponse.items.map { it.toDomain() }
                     val domainMeta = networkResponse.meta.toDomain()
                     Log.i(
