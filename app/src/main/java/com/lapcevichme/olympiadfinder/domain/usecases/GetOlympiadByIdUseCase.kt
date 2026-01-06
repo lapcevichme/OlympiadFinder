@@ -3,15 +3,18 @@ package com.lapcevichme.olympiadfinder.domain.usecases
 import com.lapcevichme.olympiadfinder.domain.model.Olympiad
 import com.lapcevichme.olympiadfinder.domain.model.Resource
 import com.lapcevichme.olympiadfinder.domain.repository.OlympiadRepository
-import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 /**
- * Use Case для получения списка всех олимпиад.
+ * Use Case для получения олимпиады по ее уникальному идентификатору.
  * Обращается к [OlympiadRepository] для получения данных.
+ *
+ * @param id Уникальный идентификатор олимпиады.
  */
-class GetAllOlympiadsUseCase @Inject constructor(
+class GetOlympiadByIdUseCase @Inject constructor(
     private val olympiadRepository: OlympiadRepository
 ) {
-    operator fun invoke(): Flow<Resource<List<Olympiad>>> = olympiadRepository.getAllOlympiads()
+    suspend operator fun invoke(id: Long): Resource<Olympiad> {
+        return olympiadRepository.getOlympiadById(id)
+    }
 }

@@ -1,107 +1,140 @@
 package com.lapcevichme.olympiadfinder.presentation.screens.settings
-import androidx.compose.foundation.clickable
+
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.lapcevichme.olympiadfinder.presentation.components.settings_screen.SettingsCategoryItem
 import com.lapcevichme.olympiadfinder.presentation.navigation.AppDestinations.SETTINGS_ANIMATION_SCREEN
 import com.lapcevichme.olympiadfinder.presentation.navigation.AppDestinations.SETTINGS_APPEARANCE_SCREEN
 import com.lapcevichme.olympiadfinder.presentation.navigation.AppDestinations.SETTINGS_DATA_DISPLAY_SCREEN
 import com.lapcevichme.olympiadfinder.presentation.navigation.AppDestinations.SETTINGS_DATA_SCREEN
-import com.lapcevichme.olympiadfinder.presentation.viewmodel.SettingsViewModel
+import com.lapcevichme.olympiadfinder.ui.theme.PreviewTheme
 
 
 @Composable
 fun SettingsHomeScreen(
-    navController: NavController,
-    viewModel: SettingsViewModel = hiltViewModel()
+    navController: NavController
 ) {
+    SettingsHomeScreenContent(
+        onAppearanceClick = { navController.navigate(SETTINGS_APPEARANCE_SCREEN) },
+        onDataDisplayClick = { navController.navigate(SETTINGS_DATA_DISPLAY_SCREEN) },
+        onAnimationsClick = { navController.navigate(SETTINGS_ANIMATION_SCREEN) },
+        onDataClick = { navController.navigate(SETTINGS_DATA_SCREEN) }
+        // TODO: Добавить колбэки для других категорий
+    )
+}
 
+// Stateless Composable для UI контента SettingsHomeScreen
+@Composable
+private fun SettingsHomeScreenContent(
+    onAppearanceClick: () -> Unit,
+    onDataDisplayClick: () -> Unit,
+    onAnimationsClick: () -> Unit,
+    onDataClick: () -> Unit
+    // TODO: Добавить колбэки для других категорий
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        Text("Настройки", style = MaterialTheme.typography.headlineMedium)
+        Text(
+            "Настройки",
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground
+        )
         Spacer(modifier = Modifier.height(16.dp))
 
         // --- Раздел "Общие" ---
-
-        Text("Общие", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Общие",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground
+        )
         Spacer(modifier = Modifier.height(8.dp))
 
         SettingsCategoryItem(
             title = "Внешний вид",
-            onClick = { navController.navigate(SETTINGS_APPEARANCE_SCREEN) }
+            onClick = onAppearanceClick
         )
 
         // категория "Отображение данных"
         SettingsCategoryItem(
             title = "Отображение данных",
-            onClick = { navController.navigate(SETTINGS_DATA_DISPLAY_SCREEN) }
+            onClick = onDataDisplayClick
         )
 
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp)) // Разделитель
+        HorizontalDivider(
+            modifier = Modifier.padding(vertical = 16.dp),
+            color = MaterialTheme.colorScheme.outline
+        )
 
         // --- Список категорий настроек для навигации ---
-        Text("Дополнительно", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Дополнительно",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground
+        )
         Spacer(modifier = Modifier.height(8.dp))
 
         SettingsCategoryItem(
             title = "Анимации",
-            onClick = { navController.navigate(SETTINGS_ANIMATION_SCREEN) }
+            onClick = onAnimationsClick
         )
         SettingsCategoryItem(
             title = "Данные",
-            onClick = { navController.navigate(SETTINGS_DATA_SCREEN) }
+            onClick = onDataClick
         )
         // TODO: Добавить другие категории
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+        HorizontalDivider(
+            modifier = Modifier.padding(vertical = 16.dp),
+            color = MaterialTheme.colorScheme.outline
+        )
 
 
         // --- About Section (Оставляем на главном экране) ---
-        Text("О приложении", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "О приложении",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground
+        )
         Spacer(modifier = Modifier.height(8.dp))
         // TODO: Add Text items for Version, Links to Privacy Policy, Feedback etc.
-        Text("Версия: 1.0.0 (Пример)", style = MaterialTheme.typography.bodyMedium)
-
-
+        Text(
+            "Версия: 1.0.0 (Пример)",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onBackground
+        )
     }
 }
 
-// Вспомогательный компонент для элемента категории настроек (кликабельная строка)
+// --- PREVIEWS ДЛЯ SettingsHomeScreenContent ---
+@Preview(showBackground = true, name = "Light Theme")
+@Preview(
+    showBackground = true,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    name = "Dark Theme"
+)
 @Composable
-fun SettingsCategoryItem(title: String, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 0.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = 16.dp)
+fun PreviewSettingsHomeScreen() {
+    PreviewTheme {
+        SettingsHomeScreenContent(
+            onAppearanceClick = {},
+            onDataDisplayClick = {},
+            onAnimationsClick = {},
+            onDataClick = {}
         )
-        // можно добавить иконку стрелки > справа
-        // Icon(imageVector = Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
     }
 }

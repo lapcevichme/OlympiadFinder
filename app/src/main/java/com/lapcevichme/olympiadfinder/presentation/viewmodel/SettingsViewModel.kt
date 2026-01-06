@@ -1,10 +1,12 @@
 package com.lapcevichme.olympiadfinder.presentation.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lapcevichme.olympiadfinder.data.local.DEFAULT_PAGE_SIZE
+import com.lapcevichme.olympiadfinder.data.local.PreferencesSettingsDataStore.Companion.DEFAULT_PAGE_SIZE
 import com.lapcevichme.olympiadfinder.domain.model.AppFont
 import com.lapcevichme.olympiadfinder.domain.model.Theme
+import com.lapcevichme.olympiadfinder.domain.usecases.settings.ClearCacheUseCase
 import com.lapcevichme.olympiadfinder.domain.usecases.settings.GetFontPreferenceUseCase
 import com.lapcevichme.olympiadfinder.domain.usecases.settings.GetPageSizePreferenceUseCase
 import com.lapcevichme.olympiadfinder.domain.usecases.settings.GetThemePreferenceUseCase
@@ -18,96 +20,162 @@ import com.lapcevichme.olympiadfinder.domain.usecases.settings.animations.SaveAn
 import com.lapcevichme.olympiadfinder.domain.usecases.settings.animations.SaveAnimatePageTransitionsUseCase
 import com.lapcevichme.olympiadfinder.domain.usecases.settings.animations.SaveAnimateThemeChangesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
+    // --- Theme Use Cases ---
     getThemePreferenceUseCase: GetThemePreferenceUseCase,
     private val saveThemePreferenceUseCase: SaveThemePreferenceUseCase,
+    // --- Page Size Use Cases ---
     getPageSizePreferenceUseCase: GetPageSizePreferenceUseCase,
     private val savePageSizePreferenceUseCase: SavePageSizePreferenceUseCase,
-    // --- Animations Usecases ---
+    // --- Animations Use Cases ---
     getAnimatePageTransitionsUseCase: GetAnimatePageTransitionsUseCase,
     private val saveAnimatePageTransitionsUseCase: SaveAnimatePageTransitionsUseCase,
     getAnimateListItemsUseCase: GetAnimateListItemsUseCase,
     private val saveAnimateListItemsUseCase: SaveAnimateListItemsUseCase,
     getAnimateThemeChangesUseCase: GetAnimateThemeChangesUseCase,
     private val saveAnimateThemeChangesUseCase: SaveAnimateThemeChangesUseCase,
-    // --- Font Usecases ---
+    // --- Font Use Cases ---
     getFontPreferenceUseCase: GetFontPreferenceUseCase,
-    private val saveFontPreferenceUseCase: SaveFontPreferenceUseCase
+    private val saveFontPreferenceUseCase: SaveFontPreferenceUseCase,
+    // --- Cache Use Case ---
+    private val clearCacheUseCase: ClearCacheUseCase
 ) : ViewModel() {
 
-    val currentTheme: StateFlow<Theme> = getThemePreferenceUseCase()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = Theme.SYSTEM
-        )
+    companion object {
+        private const val TAG = "SettingsViewModel"
+    }
 
-    val currentPageSize: StateFlow<Int> = getPageSizePreferenceUseCase()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = DEFAULT_PAGE_SIZE
-        )
+    // --- StateFlows для настроек ---
+    val currentTheme: StateFlow<Theme> = getThemePreferenceUseCase().stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(5000), Theme.SYSTEM
+    )
+    val currentPageSize: StateFlow<Int> = getPageSizePreferenceUseCase().stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(5000), DEFAULT_PAGE_SIZE
+    )
+    val animatePageTransitions: StateFlow<Boolean> = getAnimatePageTransitionsUseCase().stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(5000), true
+    )
+    val animateListItems: StateFlow<Boolean> = getAnimateListItemsUseCase().stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(5000), true
+    )
+    val animateThemeChanges: StateFlow<Boolean> = getAnimateThemeChangesUseCase().stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(5000), true
+    )
+    val appFont: StateFlow<AppFont> = getFontPreferenceUseCase().stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(5000), AppFont.DEFAULT
+    )
 
+    private val _uiEvents = MutableSharedFlow<String>()
+    val uiEvents: SharedFlow<String> = _uiEvents.asSharedFlow()
+
+    init {
+        Log.i(TAG, "SettingsViewModel created with hashcode: ${this.hashCode()}")
+        Log.d(TAG, "Initial theme: ${currentTheme.value}")
+        Log.d(TAG, "Initial page size: ${currentPageSize.value}")
+        Log.d(TAG, "Initial animatePageTransitions: ${animatePageTransitions.value}")
+        Log.d(TAG, "Initial animateListItems: ${animateListItems.value}")
+        Log.d(TAG, "Initial animateThemeChanges: ${animateThemeChanges.value}")
+        Log.d(TAG, "Initial font: ${appFont.value}")
+    }
+
+    /**
+     * Изменяет и сохраняет предпочтение размера страницы.
+     * @param newPageSize Новый размер страницы для сохранения.
+     */
     fun changePageSize(newPageSize: Int) {
+        Log.d(TAG, "Attempting to change page size to: $newPageSize")
         viewModelScope.launch {
             savePageSizePreferenceUseCase(newPageSize)
+            Log.i(TAG, "Page size changed to: $newPageSize")
         }
     }
 
+    /**
+     * Изменяет и сохраняет предпочтение темы приложения.
+     * @param newTheme Новая тема для сохранения.
+     */
     fun changeTheme(newTheme: Theme) {
+        Log.d(TAG, "Attempting to change theme to: $newTheme")
         viewModelScope.launch {
             saveThemePreferenceUseCase(newTheme)
+            Log.i(TAG, "Theme changed to: $newTheme")
         }
     }
 
-    // --- НОВЫЕ StateFlows и Функции для Анимаций ---
-    val animatePageTransitions: StateFlow<Boolean> = getAnimatePageTransitionsUseCase()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-
+    /**
+     * Изменяет и сохраняет предпочтение анимации переходов между страницами.
+     * @param enabled Состояние включения/выключения анимации.
+     */
     fun setAnimatePageTransitions(enabled: Boolean) {
-        viewModelScope.launch { saveAnimatePageTransitionsUseCase(enabled) }
+        Log.d(TAG, "Attempting to set animatePageTransitions to: $enabled")
+        viewModelScope.launch {
+            saveAnimatePageTransitionsUseCase(enabled)
+            Log.i(TAG, "animatePageTransitions set to: $enabled")
+        }
     }
 
-    val animateListItems: StateFlow<Boolean> = getAnimateListItemsUseCase()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-
+    /**
+     * Изменяет и сохраняет предпочтение анимации элементов списка.
+     * @param enabled Состояние включения/выключения анимации.
+     */
     fun setAnimateListItems(enabled: Boolean) {
-        viewModelScope.launch { saveAnimateListItemsUseCase(enabled) }
+        Log.d(TAG, "Attempting to set animateListItems to: $enabled")
+        viewModelScope.launch {
+            saveAnimateListItemsUseCase(enabled)
+            Log.i(TAG, "animateListItems set to: $enabled")
+        }
     }
 
-    val animateThemeChanges: StateFlow<Boolean> = getAnimateThemeChangesUseCase()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-
+    /**
+     * Изменяет и сохраняет предпочтение анимации смены темы.
+     * @param enabled Состояние включения/выключения анимации.
+     */
     fun setAnimateThemeChanges(enabled: Boolean) {
-        viewModelScope.launch { saveAnimateThemeChangesUseCase(enabled) }
+        Log.d(TAG, "Attempting to set animateThemeChanges to: $enabled")
+        viewModelScope.launch {
+            saveAnimateThemeChangesUseCase(enabled)
+            Log.i(TAG, "animateThemeChanges set to: $enabled")
+        }
     }
 
-    // StateFlow для текущего выбранного шрифта
-    val appFont: StateFlow<AppFont> = getFontPreferenceUseCase()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = AppFont.DEFAULT
-        )
-
+    /**
+     * Изменяет и сохраняет предпочтение шрифта приложения.
+     * @param font Новый шрифт для сохранения.
+     */
     fun changeFont(font: AppFont) {
+        Log.d(TAG, "Attempting to change font to: $font")
         viewModelScope.launch {
             saveFontPreferenceUseCase(font)
+            Log.i(TAG, "Font changed to: $font")
         }
     }
 
+
+    /**
+     * Инициирует действие по очистке кэша приложения.
+     * Вызывает [ClearCacheUseCase] и отправляет событие на UI для показа Snackbar.
+     */
     fun clearCache() {
+        Log.d(TAG, "Clear cache action triggered in SettingsViewModel")
         viewModelScope.launch {
-            println("Clear cache action triggered in SettingsViewModel")
-            // Возможно, нужно вызвать use case или repo метод
+            try {
+                clearCacheUseCase()
+                _uiEvents.emit("Кэш успешно очищен")
+                Log.i(TAG, "Cache clear operation successful.")
+            } catch (e: Exception) {
+                Log.e(TAG, "Cache clear operation failed.", e)
+                _uiEvents.emit("Ошибка при очистке кэша")
+            }
         }
     }
 }

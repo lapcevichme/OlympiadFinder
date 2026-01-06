@@ -1,5 +1,9 @@
 package com.lapcevichme.olympiadfinder.domain.model
 
+/**
+ * Data-класс, представляющий доменную модель для олимпиады.
+ * Используется в бизнес-логике приложения.
+ */
 data class Olympiad(
     val id: Long,
     val name: String,
@@ -11,11 +15,3 @@ data class Olympiad(
     val description: String?,
     val keywords: String?
 )
-
-/*
-    Необходимо подумать насчет полей.
-    Вероятно keywords даже не нужны и будут импользоваться только на сервере
-    Можно сделать так:
-    responseOlympiad - это олимпиада которая содержит данных по минимуму (или наоборот)
-    olympiad - подробные данные, например в новом экране.
- */
