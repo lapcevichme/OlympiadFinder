@@ -85,5 +85,8 @@ interface SettingsRepository {
      */
     suspend fun setFontPreference(font: AppFont)
 
-    // suspend fun clearCache()
+    /**
+     * Очищает кэш приложения (в данном случае, кэш OkHttp).
+     */
+    suspend fun clearCache()
 }

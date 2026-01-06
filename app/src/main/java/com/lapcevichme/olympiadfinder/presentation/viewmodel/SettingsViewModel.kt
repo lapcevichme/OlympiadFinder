@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.lapcevichme.olympiadfinder.data.local.PreferencesSettingsDataStore.Companion.DEFAULT_PAGE_SIZE
 import com.lapcevichme.olympiadfinder.domain.model.AppFont
 import com.lapcevichme.olympiadfinder.domain.model.Theme
+import com.lapcevichme.olympiadfinder.domain.usecases.settings.ClearCacheUseCase
 import com.lapcevichme.olympiadfinder.domain.usecases.settings.GetFontPreferenceUseCase
 import com.lapcevichme.olympiadfinder.domain.usecases.settings.GetPageSizePreferenceUseCase
 import com.lapcevichme.olympiadfinder.domain.usecases.settings.GetThemePreferenceUseCase
@@ -19,30 +20,15 @@ import com.lapcevichme.olympiadfinder.domain.usecases.settings.animations.SaveAn
 import com.lapcevichme.olympiadfinder.domain.usecases.settings.animations.SaveAnimatePageTransitionsUseCase
 import com.lapcevichme.olympiadfinder.domain.usecases.settings.animations.SaveAnimateThemeChangesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/**
- * ViewModel для экрана настроек приложения.
- * Отвечает за управление и сохранение пользовательских предпочтений,
- * таких как тема, размер страницы, настройки анимации и шрифт.
- *
- * @param getThemePreferenceUseCase Use Case для получения текущей темы.
- * @param saveThemePreferenceUseCase Use Case для сохранения выбранной темы.
- * @param getPageSizePreferenceUseCase Use Case для получения текущего размера страницы.
- * @param savePageSizePreferenceUseCase Use Case для сохранения выбранного размера страницы.
- * @param getAnimatePageTransitionsUseCase Use Case для получения настройки анимации переходов между страницами.
- * @param saveAnimatePageTransitionsUseCase Use Case для сохранения настройки анимации переходов между страницами.
- * @param getAnimateListItemsUseCase Use Case для получения настройки анимации элементов списка.
- * @param saveAnimateListItemsUseCase Use Case для сохранения настройки анимации элементов списка.
- * @param getAnimateThemeChangesUseCase Use Case для получения настройки анимации смены темы.
- * @param saveAnimateThemeChangesUseCase Use Case для сохранения настройки анимации смены темы.
- * @param getFontPreferenceUseCase Use Case для получения текущего шрифта приложения.
- * @param saveFontPreferenceUseCase Use Case для сохранения выбранного шрифта приложения.
- */
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     // --- Theme Use Cases ---
@@ -60,60 +46,37 @@ class SettingsViewModel @Inject constructor(
     private val saveAnimateThemeChangesUseCase: SaveAnimateThemeChangesUseCase,
     // --- Font Use Cases ---
     getFontPreferenceUseCase: GetFontPreferenceUseCase,
-    private val saveFontPreferenceUseCase: SaveFontPreferenceUseCase
+    private val saveFontPreferenceUseCase: SaveFontPreferenceUseCase,
+    // --- Cache Use Case ---
+    private val clearCacheUseCase: ClearCacheUseCase
 ) : ViewModel() {
 
     companion object {
         private const val TAG = "SettingsViewModel"
     }
 
-    /**
-     * [StateFlow] текущей выбранной темы приложения.
-     * Собирается из [GetThemePreferenceUseCase].
-     */
+    // --- StateFlows для настроек ---
     val currentTheme: StateFlow<Theme> = getThemePreferenceUseCase().stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000), Theme.SYSTEM
     )
-
-    /**
-     * [StateFlow] текущего выбранного размера страницы для отображения списков.
-     * Собирается из [GetPageSizePreferenceUseCase].
-     */
     val currentPageSize: StateFlow<Int> = getPageSizePreferenceUseCase().stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000), DEFAULT_PAGE_SIZE
     )
-
-    /**
-     * [StateFlow] состояния включения/выключения анимации переходов между страницами.
-     * Собирается из [GetAnimatePageTransitionsUseCase].
-     */
     val animatePageTransitions: StateFlow<Boolean> = getAnimatePageTransitionsUseCase().stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000), true
     )
-
-    /**
-     * [StateFlow] состояния включения/выключения анимации элементов списка.
-     * Собирается из [GetAnimateListItemsUseCase].
-     */
     val animateListItems: StateFlow<Boolean> = getAnimateListItemsUseCase().stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000), true
     )
-
-    /**
-     * [StateFlow] состояния включения/выключения анимации смены темы.
-     * Собирается из [GetAnimateThemeChangesUseCase].
-     */
     val animateThemeChanges: StateFlow<Boolean> = getAnimateThemeChangesUseCase().stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000), true
     )
-
-    /**
-     * [StateFlow] текущего выбранного шрифта приложения.
-     * Собирается из [GetFontPreferenceUseCase].
-     */
     val appFont: StateFlow<AppFont> = getFontPreferenceUseCase().stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000), AppFont.DEFAULT
     )
+
+    private val _uiEvents = MutableSharedFlow<String>()
+    val uiEvents: SharedFlow<String> = _uiEvents.asSharedFlow()
 
     init {
         Log.i(TAG, "SettingsViewModel created with hashcode: ${this.hashCode()}")
@@ -197,15 +160,22 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+
     /**
      * Инициирует действие по очистке кэша приложения.
-     * TODO: Добавить вызов соответствующего Use Case или метода репозитория.
+     * Вызывает [ClearCacheUseCase] и отправляет событие на UI для показа Snackbar.
      */
     fun clearCache() {
         Log.d(TAG, "Clear cache action triggered in SettingsViewModel")
         viewModelScope.launch {
-            // Возможно, нужно вызвать use case или repo метод
-            Log.i(TAG, "Cache clear operation initiated (implementation pending)")
+            try {
+                clearCacheUseCase()
+                _uiEvents.emit("Кэш успешно очищен")
+                Log.i(TAG, "Cache clear operation successful.")
+            } catch (e: Exception) {
+                Log.e(TAG, "Cache clear operation failed.", e)
+                _uiEvents.emit("Ошибка при очистке кэша")
+            }
         }
     }
 }

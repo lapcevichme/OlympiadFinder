@@ -1,23 +1,29 @@
 package com.lapcevichme.olympiadfinder.data.repository.impl
 
+import android.util.Log
 import com.lapcevichme.olympiadfinder.data.local.PreferencesSettingsDataStore
 import com.lapcevichme.olympiadfinder.domain.model.AppFont
 import com.lapcevichme.olympiadfinder.domain.model.Theme
 import com.lapcevichme.olympiadfinder.domain.repository.SettingsRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
+import okhttp3.Cache
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * Реализация интерфейса [SettingsRepository], отвечающая за управление пользовательскими
  * предпочтениями, такими как тема приложения, размер страницы и настройки анимации,
- * используя [PreferencesSettingsDataStore].
+ * используя [PreferencesSettingsDataStore]. Также управляет кэшем OkHttp.
  *
  * @property settingsDataStore DataStore для хранения настроек приложения.
+ * @property okhttpCache Кэш OkHttp, используемый для сетевых запросов.
  */
 @Singleton
 class SettingsRepositoryImpl @Inject constructor(
-    private val settingsDataStore: PreferencesSettingsDataStore
+    private val settingsDataStore: PreferencesSettingsDataStore,
+    private val okhttpCache: Cache
 ) : SettingsRepository {
 
     /**
@@ -119,5 +125,20 @@ class SettingsRepositoryImpl @Inject constructor(
      */
     override suspend fun setFontPreference(font: AppFont) {
         settingsDataStore.saveFontPreference(font)
+    }
+
+    /**
+     * Очищает кэш OkHttp. Метод evictAll() удаляет все элементы из кэша.
+     * Операция выполняется на IO-диспетчере, так как может включать дисковые операции.
+     */
+    override suspend fun clearCache() {
+        withContext(Dispatchers.IO) {
+            try {
+                okhttpCache.evictAll()
+                Log.i("SettingsRepositoryImpl", "Кэш OkHttp успешно очищен.")
+            } catch (e: Exception) {
+                Log.e("SettingsRepositoryImpl", "Ошибка при очистке кэша OkHttp", e)
+            }
+        }
     }
 }
